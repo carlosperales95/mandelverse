@@ -1,132 +1,168 @@
 <template>
-  <div class="mandelbrot-container">
+  <div class="relative w-full h-screen overflow-hidden">
     <canvas 
       ref="canvas" 
-      width="800" 
-      height="800"
+      :width="width" 
+      :height="height"
       @mousedown="zoom"
-      class="border border-gray-300 cursor-crosshair"
+      class="cursor-crosshair absolute inset-0"
     ></canvas>
     
-    <div class="info-panel mt-4 p-4 bg-gray-100 rounded">
-      <p class="text-sm"><strong>Click to zoom in!</strong></p>
-      <p class="text-xs mt-2">Location: {{ interestingPoints[currentPointIndex].name }}</p>
-      <p class="text-xs">X: {{ xmin.toFixed(6) }}</p>
-      <p class="text-xs">Y: {{ ymin.toFixed(6) }}</p>
-      <p class="text-xs">Scale: {{ scale.toFixed(2) }}</p>
-      <p class="text-xs text-orange-600" v-if="isAutoZooming && sameFrameCount > 0">
-        ⚠ Boring region detected: {{ sameFrameCount }}/{{ maxSameFrames }}
-      </p>
-      
-      <div class="mt-3">
-        <label class="text-xs block mb-1">Color Scheme:</label>
-        <select 
-          v-model="colorScheme" 
-          @change="mandel"
-          class="w-full px-3 py-2 border rounded"
-        >
-          <option value="fire">Fire (Red-Yellow-White)</option>
-          <option value="ocean">Ocean (Blue-Cyan-White)</option>
-          <option value="sunset">Sunset (Orange-Pink-Purple)</option>
-          <option value="forest">Forest (Green-Teal-Brown)</option>
-          <option value="lavender">Lavender Dream (Purple-Pink-White)</option>
-          <option value="copper">Copper (Brown-Orange-Gold)</option>
-          <option value="ice">Ice (White-Cyan-Blue)</option>
-          <option value="cherry">Cherry Blossom (Pink-White-Rose)</option>
-          <option value="midnight">Midnight (Navy-Purple-Magenta)</option>
-          <option value="autumn">Autumn (Red-Orange-Yellow-Brown)</option>
-          <option value="mint">Mint (Mint-Teal-Emerald)</option>
-          <option value="peacock">Peacock (Teal-Blue-Green-Gold)</option>
-          <option value="rainbow">Rainbow</option>
-          <option value="grayscale">Grayscale</option>
-          <option value="rgb">Red-Green-Blue (Classic)</option>
-          <option value="hacker">Hacker Green (Black → Lime → Cyan)</option>
-          <option value="matrix">Matrix (Black → Neon Green)</option>
-          <option value="cyberpunk">Cyberpunk (Magenta → Purple → Cyan)</option>
-          <option value="firestorm">Firestorm</option>
-        <option value="oceanic">Oceanic</option>
-        <option value="aurora">Aurora</option>
-        <option value="glacier">Glacier</option>
-        <option value="royal">Royal</option>
-        <option value="spectrum">Spectrum</option>
-        <option value="hacker-pro">Hacker Green (Black → Lime → Cyan)</option>
-          <option value="matrix-pro">Matrix (Black → Neon Green)</option>
-          <option value="cyberpunk-pro">Cyberpunk (Magenta → Purple → Cyan)</option>
-        </select>
-      </div>
-      
-      <div class="mt-3">
-        <label class="text-xs block mb-1">Select Region to Zoom:</label>
-        <select 
-          v-model="selectedRegion" 
-          @change="jumpToRegion"
-          class="w-full px-3 py-2 border rounded"
-        >
-          <option :value="null">-- Choose a region --</option>
-          <option v-for="(point, index) in interestingPoints" :key="index" :value="index">
-            {{ point.name }}
-          </option>
-        </select>
-      </div>
-      
-      <div class="flex flex-wrap gap-2 mt-3">
-        <button 
-          @click="toggleAutoZoom" 
-          :class="[
-            'px-4 py-2 rounded transition',
-            isAutoZooming ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600',
-            'text-white'
-          ]"
-        >
-          {{ isAutoZooming ? 'Stop Auto Zoom' : 'Start Auto Zoom' }}
-        </button>
-        
-        <button 
-          @click="reset" 
-          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-        >
-          Reset
-        </button>
+    <!-- Menu Toggle Button -->
+    <button 
+      @click="showMenu = !showMenu"
+      class="fixed top-4 right-4 z-50 bg-black/50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/70 transition-all shadow-lg"
+    >
+      <svg v-if="!showMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
 
-        <button 
-          @click="clickAutoZoomMode = !clickAutoZoomMode"
-          :class="[
-            'px-4 py-2 rounded transition',
-            clickAutoZoomMode ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-400 hover:bg-gray-500',
-            'text-white'
-          ]"
-        >
-          {{ clickAutoZoomMode ? 'Click AutoZoom: ON' : 'Click AutoZoom: OFF' }}
-        </button>
-        <button 
-  @click="randomExploreMode = !randomExploreMode"
-  :class="[
-    'px-4 py-2 rounded transition',
-    randomExploreMode ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-400 hover:bg-gray-500',
-    'text-white'
-  ]"
->
-  {{ randomExploreMode ? 'Random Explore: ON' : 'Random Explore: OFF' }}
-</button>
-      </div>
-      
-      <div class="mt-3">
-        <label class="text-xs block mb-1">Zoom Speed: {{ zoomSpeed }}ms ({{ Math.round(1000/zoomSpeed) }} fps)</label>
-        <input 
-          v-model.number="zoomSpeed" 
-          type="range" 
-          min="16" 
-          max="200" 
-          step="16"
-          class="w-full"
-          :disabled="isAutoZooming"
-        />
-        <div class="flex justify-between text-xs text-gray-500">
-          <span>Fast (60fps)</span>
-          <span>Slow (5fps)</span>
+    <!-- Info Badge (Always Visible) -->
+    <div class="fixed top-4 left-4 z-40 bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg">
+      <p class="font-semibold">{{ interestingPoints[currentPointIndex].name }}</p>
+      <p class="text-xs opacity-75">Scale: {{ scale.toFixed(2) }}</p>
+    </div>
+
+    <!-- Warning Badge -->
+    <div v-if="isAutoZooming && sameFrameCount > 0" 
+         class="fixed top-20 left-4 z-40 bg-orange-500/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg">
+      ⚠ Boring region: {{ sameFrameCount }}/{{ maxSameFrames }}
+    </div>
+
+    <!-- Overlay Menu Panel -->
+    <transition name="slide">
+      <div v-if="showMenu" class="fixed right-0 top-0 h-full w-96 bg-black/90 backdrop-blur-md text-white z-40 overflow-y-auto shadow-2xl">
+        <div class="p-6 pt-20">
+          <h2 class="text-2xl font-bold mb-6 text-emerald-400">Controls</h2>
+          
+          <!-- Color Scheme -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2">Color Scheme</label>
+            <select 
+              v-model="colorScheme" 
+              @change="mandel"
+              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-400 text-white"
+            >
+                <option value="rgb">RGB (Classic)</option>
+                <option value="hacker">Hacker Green </option>
+                <option value="matrix">Matrix</option>
+                <option value="cyberpunk">Cyberpunk</option>
+                <option value="matrix-pro">💚 Matrix Pro</option>
+                <option value="hacker-pro">🖥️ Hacker Pro</option>
+                <option value="cyberpunk-pro">💜 Cyberpunk Pro</option>
+                <option value="fire">🔥 Fire</option>
+                <option value="ocean">🌊 Ocean</option>
+                <option value="sunset">🌅 Sunset</option>
+                <option value="forest">🌲 Forest</option>
+                <option value="lavender">💜 Lavender</option>
+                <option value="copper">🟤 Copper</option>
+                <option value="ice">❄️ Ice</option>
+                <option value="cherry">🌸 Cherry Blossom</option>
+                <option value="midnight">🌙 Midnight</option>
+                <option value="autumn">🍂 Autumn</option>
+                <option value="mint">🌿 Mint</option>
+                <option value="peacock">🦚 Peacock</option>
+                <option value="rainbow">🌈 Rainbow</option>
+                <option value="firestorm">🔥 Firestorm</option>
+                <option value="oceanic">🌊 Oceanic</option>
+                <option value="aurora">✨ Aurora</option>
+                <option value="glacier">🧊 Glacier</option>
+                <option value="royal">👑 Royal</option>
+                <option value="spectrum">🎨 Spectrum</option>
+                <option value="grayscale">Grayscale</option>
+            </select>
+          </div>
+
+          <!-- Region Selection -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2">Jump to Region</label>
+            <select 
+              v-model="selectedRegion" 
+              @change="jumpToRegion"
+              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-400 text-white"
+            >
+              <option :value="null">-- Choose a region --</option>
+              <option v-for="(point, index) in interestingPoints" :key="index" :value="index">
+                {{ point.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Control Buttons -->
+          <div class="space-y-3 mb-6">
+            <button 
+              @click="toggleAutoZoom" 
+              :class="[
+                'w-full px-4 py-3 rounded-lg font-semibold transition-all',
+                isAutoZooming ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
+              ]"
+            >
+              {{ isAutoZooming ? '⏸ Stop Auto Zoom' : '▶️ Start Auto Zoom' }}
+            </button>
+            
+            <button 
+              @click="reset" 
+              class="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all"
+            >
+              🔄 Reset View
+            </button>
+
+            <button 
+              @click="clickAutoZoomMode = !clickAutoZoomMode"
+              :class="[
+                'w-full px-4 py-3 rounded-lg font-semibold transition-all',
+                clickAutoZoomMode ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-600 hover:bg-gray-700'
+              ]"
+            >
+              {{ clickAutoZoomMode ? '✓ Click AutoZoom' : '✗ Click AutoZoom' }}
+            </button>
+
+            <button 
+              @click="randomExploreMode = !randomExploreMode"
+              :class="[
+                'w-full px-4 py-3 rounded-lg font-semibold transition-all',
+                randomExploreMode ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-600 hover:bg-gray-700'
+              ]"
+            >
+              {{ randomExploreMode ? '✓ Random Explore' : '✗ Random Explore' }}
+            </button>
+          </div>
+
+          <!-- Zoom Speed -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2">
+              Zoom Speed: {{ zoomSpeed }}ms ({{ Math.round(1000/zoomSpeed) }} fps)
+            </label>
+            <input 
+              v-model.number="zoomSpeed" 
+              type="range" 
+              min="16" 
+              max="200" 
+              step="16"
+              class="w-full"
+              :disabled="isAutoZooming"
+            />
+            <div class="flex justify-between text-xs opacity-75 mt-1">
+              <span>Fast (60fps)</span>
+              <span>Slow (5fps)</span>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div class="mt-8 p-4 bg-white/5 rounded-lg text-sm space-y-2">
+            <p class="font-semibold text-emerald-400">How to Use:</p>
+            <p>• Click anywhere to zoom in</p>
+            <p>• Enable Click AutoZoom for smooth zoom</p>
+            <p>• Auto Zoom explores interesting regions</p>
+            <p>• Random Explore jumps when bored</p>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
@@ -136,22 +172,33 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 const canvas = ref(null);
 const xmin = ref(-2);
 const ymin = ref(-2);
-const scale = ref(50);
+const scale = ref(80);
 const isAutoZooming = ref(false);
 const clickAutoZoomMode = ref(false);
 const zoomSpeed = ref(50);
 const colorScheme = ref('fire');
 const selectedRegion = ref(null);
+const showMenu = ref(false);
+
+const width = ref(window.innerWidth);
+const height = ref(window.innerHeight);
+const pixelScale = 4;
+const gridWidth = computed(() => width.value / pixelScale);
+const gridHeight = computed(() => height.value / pixelScale);
+
 let autoZoomInterval = null;
 let clickZoomTarget = null;
-
-// Frame comparison for detecting boring regions
 let previousFrameData = null;
 let sameFrameCount = 0;
-const maxSameFrames = 100;
+const maxSameFrames = 200;
 const similarityThreshold = 0.95;
 
-// Color scheme generators
+const handleResize = () => {
+  width.value = window.innerWidth;
+  height.value = window.innerHeight;
+  mandel();
+};
+
 const generatePalette = (scheme) => {
   const palette = [];
   
@@ -342,7 +389,7 @@ const hslToRgb = (h, s, l) => {
 const palette = computed(() => generatePalette(colorScheme.value));
 
 const interestingPoints = [
-  // 🧠 Classic iconic spots
+  // Classics
   { x: -0.7453, y: 0.1127, name: "Elephant Valley" },
   { x: -0.743643887037151, y: 0.13182590420533, name: "Triple Spiral Valley" },
   { x: -0.745, y: 0.105, name: "Elephant Trunk Detail" },
@@ -351,7 +398,7 @@ const interestingPoints = [
   { x: -0.1592, y: 1.0317, name: "Needle" },
   { x: -0.1011, y: 0.9563, name: "Satellite" },
   
-  // 🌪 Fractal vortexes and mini Mandelbrots
+  // Fractal vortexes
   { x: -1.25066, y: 0.02012, name: "Mandelbrot Mini (Left Arm)" },
   { x: -1.3107, y: 0.0659, name: "Mini Spiral Cluster" },
   { x: -0.7435669, y: 0.1314023, name: "Double Spiral Galaxy" },
@@ -361,7 +408,7 @@ const interestingPoints = [
   { x: -0.748, y: 0.1, name: "Micro Spiral Chain" },
   { x: -0.744, y: 0.133, name: "The Heart of Spirals" },
   
-  // 🌊 Organic / tendril shapes
+  // Organic shapes
   { x: -1.543689012, y: 0.00005204, name: "Tendril Canyon" },
   { x: -1.05, y: 0.266, name: "Coral Branching" },
   { x: -1.38, y: 0.005, name: "Root Forest" },
@@ -369,14 +416,14 @@ const interestingPoints = [
   { x: -0.1592, y: -1.0317, name: "Southern Needle" },
   { x: -0.1015, y: -0.956, name: "Southern Satellite" },
 
-  // 💎 Ultra-deep “microcosms” (great for slow autozoom)
+  // Ultra-deep “microcosms” (great for slow autozoom)
   { x: -0.743643887037158704752191506114774, y: 0.131825904205311970493132056385139, name: "Deep Valley of Spirals (Zoom-Ready)" },
   { x: -0.743643887037151, y: 0.13182590420533, name: "Deep Spiral Cluster" },
   { x: -0.7435669, y: 0.1314023, name: "Galactic Core" },
   { x: -1.94006, y: 0.0001, name: "Far Tendril Island" },
   { x: -0.77568377, y: 0.13646737, name: "Whirlpool Nexus" },
   
-  // 💫 Aesthetic symmetry / interesting geometry
+  // Aesthetic symmetry / interesting geometry
   { x: -0.1011, y: 0.9563, name: "Butterfly Wing" },
   { x: -0.745, y: 0.113, name: "Heart Filigree" },
   { x: -0.7451, y: 0.112, name: "Elephant’s Eye" },
@@ -393,14 +440,15 @@ const interestingPoints = [
 ];
 
 let currentPointIndex = 0;
+const randomExploreMode = ref(true);
 
 const mandel = () => {
   if (!canvas.value) return;
   const context = canvas.value.getContext('2d');
   const currentPalette = palette.value;
 
-  for (let x = 0; x < 200; x++) {
-    for (let y = 0; y < 200; y++) {
+  for (let x = 0; x < gridWidth.value; x++) {
+    for (let y = 0; y < gridHeight.value; y++) {
       let i = 0, zx = 0, zy = 0;
       const cx = xmin.value + x / scale.value;
       const cy = ymin.value + y / scale.value;
@@ -411,7 +459,7 @@ const mandel = () => {
         i++;
       } while (i < 255 && (zx * zx + zy * zy) < 4);
       context.fillStyle = currentPalette[i];
-      context.fillRect(x * 4, 800 - y * 4, 4, 4);
+      context.fillRect(x * pixelScale, height.value - y * pixelScale, pixelScale, pixelScale);
     }
   }
 
@@ -422,9 +470,13 @@ const checkFrameSimilarity = () => {
   if (!canvas.value) return;
   const ctx = canvas.value.getContext('2d');
   const sampled = [];
-  for (let x = 0; x < 40; x++) {
-    for (let y = 0; y < 40; y++) {
-      const d = ctx.getImageData(x * 20, y * 20, 1, 1).data;
+  const sampleSize = 40;
+  const stepX = Math.floor(width.value / sampleSize);
+  const stepY = Math.floor(height.value / sampleSize);
+  
+  for (let x = 0; x < sampleSize; x++) {
+    for (let y = 0; y < sampleSize; y++) {
+      const d = ctx.getImageData(x * stepX, y * stepY, 1, 1).data;
       sampled.push((d[0] + d[1] + d[2]) / 3);
     }
   }
@@ -442,35 +494,31 @@ const checkFrameSimilarity = () => {
   }
   previousFrameData = sampled;
 };
-const randomExploreMode = ref(true);
 
 const skipToNextPoint = () => {
   sameFrameCount = 0;
   previousFrameData = null;
- reset()
+  reset();
   if (randomExploreMode.value) {
-    console.log("✨ Random explore jump!");
-    const point = getRandomInterestingPoint();
+    currentPointIndex = Math.floor(Math.random() * interestingPoints.length);
+    const point = interestingPoints[currentPointIndex];
     xmin.value = point.x - 2;
     ymin.value = point.y - 2;
     scale.value = 50;
     mandel();
     toggleAutoZoom();
-
   } else {
-    console.log("🛑 Autozoom stopped (random explore off)");
     toggleAutoZoom();
-}
+  }
 };
-
 
 const zoom = (event) => {
   if (!canvas.value) return;
   const rect = canvas.value.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
-  const cx = xmin.value + (mouseX / 4) / scale.value;
-  const cy = ymin.value + (200 - mouseY / 4) / scale.value;
+  const cx = xmin.value + (mouseX / pixelScale) / scale.value;
+  const cy = ymin.value + (gridHeight.value - mouseY / pixelScale) / scale.value;
 
   if (clickAutoZoomMode.value) {
     clickZoomTarget = { x: cx, y: cy };
@@ -483,8 +531,8 @@ const zoom = (event) => {
       }, zoomSpeed.value);
     }
   } else {
-    xmin.value = cx - (100 / scale.value);
-    ymin.value = cy - (100 / scale.value);
+    xmin.value = cx - (gridWidth.value / 2 / scale.value);
+    ymin.value = cy - (gridHeight.value / 2 / scale.value);
     scale.value *= 2;
     mandel();
   }
@@ -493,29 +541,31 @@ const zoom = (event) => {
 const autoZoom = () => {
   const point = interestingPoints[currentPointIndex];
   const zoomFactor = 1.01;
-  const centerX = xmin.value + (200 / scale.value) / 2;
-  const centerY = ymin.value + (200 / scale.value) / 2;
+  const centerX = xmin.value + (gridWidth.value / scale.value) / 2;
+  const centerY = ymin.value + (gridHeight.value / scale.value) / 2;
   const moveSpeed = 0.02;
   const newCenterX = centerX + (point.x - centerX) * moveSpeed;
   const newCenterY = centerY + (point.y - centerY) * moveSpeed;
   scale.value *= zoomFactor;
-  const newViewSize = 200 / scale.value;
-  xmin.value = newCenterX - newViewSize / 2;
-  ymin.value = newCenterY - newViewSize / 2;
+  const newViewSizeX = gridWidth.value / scale.value;
+  const newViewSizeY = gridHeight.value / scale.value;
+  xmin.value = newCenterX - newViewSizeX / 2;
+  ymin.value = newCenterY - newViewSizeY / 2;
   mandel();
 };
 
 const autoZoomToPoint = (target) => {
   const zoomFactor = 1.02;
-  const centerX = xmin.value + (200 / scale.value) / 2;
-  const centerY = ymin.value + (200 / scale.value) / 2;
+  const centerX = xmin.value + (gridWidth.value / scale.value) / 2;
+  const centerY = ymin.value + (gridHeight.value / scale.value) / 2;
   const moveSpeed = 0.05;
   const newCenterX = centerX + (target.x - centerX) * moveSpeed;
   const newCenterY = centerY + (target.y - centerY) * moveSpeed;
   scale.value *= zoomFactor;
-  const newViewSize = 200 / scale.value;
-  xmin.value = newCenterX - newViewSize / 2;
-  ymin.value = newCenterY - newViewSize / 2;
+  const newViewSizeX = gridWidth.value / scale.value;
+  const newViewSizeY = gridHeight.value / scale.value;
+  xmin.value = newCenterX - newViewSizeX / 2;
+  ymin.value = newCenterY - newViewSizeY / 2;
   mandel();
 };
 
@@ -535,7 +585,9 @@ const toggleAutoZoom = () => {
 
 const reset = () => {
   if (isAutoZooming.value) toggleAutoZoom();
-  xmin.value = -2; ymin.value = -2; scale.value = 50;
+  xmin.value = -2;
+  ymin.value = -2;
+  scale.value = 50;
   currentPointIndex = 0;
   sameFrameCount = 0;
   previousFrameData = null;
@@ -553,26 +605,29 @@ const jumpToRegion = () => {
   const viewSize = 4.0;
   xmin.value = point.x - viewSize / 2;
   ymin.value = point.y - viewSize / 2;
-  scale.value = 200 / viewSize;
+  scale.value = gridWidth.value / viewSize;
   mandel();
 };
 
-onMounted(() => mandel());
-onUnmounted(() => { if (autoZoomInterval) clearInterval(autoZoomInterval); });
+onMounted(() => {
+  mandel();
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  if (autoZoomInterval) clearInterval(autoZoomInterval);
+  window.removeEventListener('resize', handleResize);
+});
 </script>
 
 <style scoped>
-.mandelbrot-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem;
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
 }
-canvas {
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.info-panel {
-  max-width: 800px;
-  width: 100%;
+
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(100%);
 }
 </style>
