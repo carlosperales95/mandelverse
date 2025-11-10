@@ -4,31 +4,22 @@
       ref="canvas" 
       :width="width" 
       :height="height"
-      @mousedown="zoom"
       class="cursor-crosshair absolute inset-0"
+      @mousedown="zoom"
     ></canvas>
     
-    <!-- Menu Toggle Button -->
-    <button 
-      @click="showMenu = !showMenu"
-      class="fixed top-4 right-4 z-50 bg-black/50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/70 transition-all shadow-lg"
-    >
-      <svg v-if="!showMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-      <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
+    <!-- Menu Toggle -->
+   <MenuButton :show-menu="showMenu" @click="showMenu = !showMenu" />
 
-    <!-- Info Badge (Always Visible) -->
+    <!-- Info Badge -->
     <div class="fixed top-4 left-4 z-40 bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg">
       <p class="font-semibold">{{ interestingPoints[currentPointIndex].name }}</p>
       <p class="text-xs opacity-75">Scale: {{ scale.toFixed(2) }}</p>
     </div>
 
     <!-- Warning Badge -->
-    <div v-if="isAutoZooming && sameFrameCount > 0" 
+    <div
+v-if="isAutoZooming && sameFrameCount > 0" 
          class="fixed top-20 left-4 z-40 bg-orange-500/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg">
       ⚠ Boring region: {{ sameFrameCount }}/{{ maxSameFrames }}
     </div>
@@ -40,93 +31,53 @@
           <h2 class="text-2xl font-bold mb-6 text-emerald-400">Controls</h2>
           
           <!-- Color Scheme -->
-          <div class="mb-6">
-            <label class="block text-sm font-semibold mb-2">Color Scheme</label>
-            <select 
-              v-model="colorScheme" 
-              @change="mandel"
-              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-400 text-white"
-            >
-                <option value="rgb">RGB (Classic)</option>
-                <option value="hacker">Hacker Green </option>
-                <option value="matrix">Matrix</option>
-                <option value="cyberpunk">Cyberpunk</option>
-                <option value="matrix-pro">💚 Matrix Pro</option>
-                <option value="hacker-pro">🖥️ Hacker Pro</option>
-                <option value="cyberpunk-pro">💜 Cyberpunk Pro</option>
-                <option value="fire">🔥 Fire</option>
-                <option value="ocean">🌊 Ocean</option>
-                <option value="sunset">🌅 Sunset</option>
-                <option value="forest">🌲 Forest</option>
-                <option value="lavender">💜 Lavender</option>
-                <option value="copper">🟤 Copper</option>
-                <option value="ice">❄️ Ice</option>
-                <option value="cherry">🌸 Cherry Blossom</option>
-                <option value="midnight">🌙 Midnight</option>
-                <option value="autumn">🍂 Autumn</option>
-                <option value="mint">🌿 Mint</option>
-                <option value="peacock">🦚 Peacock</option>
-                <option value="rainbow">🌈 Rainbow</option>
-                <option value="firestorm">🔥 Firestorm</option>
-                <option value="oceanic">🌊 Oceanic</option>
-                <option value="aurora">✨ Aurora</option>
-                <option value="glacier">🧊 Glacier</option>
-                <option value="royal">👑 Royal</option>
-                <option value="spectrum">🎨 Spectrum</option>
-                <option value="grayscale">Grayscale</option>
-            </select>
-          </div>
+          <SimpleSelector v-model="colorScheme" class="mb-6" :options="themeOptions" @change="mandel" >
+              <label class="block text-sm font-semibold mb-2">
+                  Choose your Theme
+              </label>
+          </SimpleSelector>
 
-          <!-- Region Selection -->
-          <div class="mb-6">
-            <label class="block text-sm font-semibold mb-2">Jump to Region</label>
-            <select 
-              v-model="selectedRegion" 
-              @change="jumpToRegion"
-              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-400 text-white"
-            >
-              <option :value="null">-- Choose a region --</option>
-              <option v-for="(point, index) in interestingPoints" :key="index" :value="index">
-                {{ point.name }}
-              </option>
-            </select>
-          </div>
+          <SimpleSelector v-model="selectedRegion" class="mb-6" :options="interestingPoints" @change="jumpToRegion">
+            <label class="block text-sm font-semibold mb-2">
+              Jump to Region
+            </label>
+          </SimpleSelector>
 
           <!-- Control Buttons -->
           <div class="space-y-3 mb-6">
             <button 
-              @click="toggleAutoZoom" 
               :class="[
                 'w-full px-4 py-3 rounded-lg font-semibold transition-all',
                 isAutoZooming ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
-              ]"
+              ]" 
+              @click="toggleAutoZoom"
             >
               {{ isAutoZooming ? '⏸ Stop Auto Zoom' : '▶️ Start Auto Zoom' }}
             </button>
             
             <button 
-              @click="reset" 
-              class="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all"
+              class="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all" 
+              @click="reset"
             >
               🔄 Reset View
             </button>
 
             <button 
-              @click="clickAutoZoomMode = !clickAutoZoomMode"
               :class="[
                 'w-full px-4 py-3 rounded-lg font-semibold transition-all',
                 clickAutoZoomMode ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-600 hover:bg-gray-700'
               ]"
+              @click="clickAutoZoomMode = !clickAutoZoomMode"
             >
               {{ clickAutoZoomMode ? '✓ Click AutoZoom' : '✗ Click AutoZoom' }}
             </button>
 
             <button 
-              @click="randomExploreMode = !randomExploreMode"
               :class="[
                 'w-full px-4 py-3 rounded-lg font-semibold transition-all',
                 randomExploreMode ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-600 hover:bg-gray-700'
               ]"
+              @click="randomExploreMode = !randomExploreMode"
             >
               {{ randomExploreMode ? '✓ Random Explore' : '✗ Random Explore' }}
             </button>
@@ -168,6 +119,10 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import MenuButton from './MenuButton.vue';
+import { themeOptions } from '@/content/themes';
+import SimpleSelector from './base/SimpleSelector.vue';
+import { interestingPoints } from '@/content/locations';
 
 const canvas = ref(null);
 const xmin = ref(-2);
@@ -177,7 +132,7 @@ const isAutoZooming = ref(false);
 const clickAutoZoomMode = ref(false);
 const zoomSpeed = ref(50);
 const colorScheme = ref('fire');
-const selectedRegion = ref(null);
+const selectedRegion = ref(0);
 const showMenu = ref(false);
 
 const width = ref(window.innerWidth);
@@ -387,62 +342,10 @@ const hslToRgb = (h, s, l) => {
 };
 
 const palette = computed(() => generatePalette(colorScheme.value));
-
-const interestingPoints = [
-  // Classics
-  { x: -0.7453, y: 0.1127, name: "Elephant Valley" },
-  { x: -0.743643887037151, y: 0.13182590420533, name: "Triple Spiral Valley" },
-  { x: -0.745, y: 0.105, name: "Elephant Trunk Detail" },
-  { x: -0.7269, y: 0.1889, name: "Double Spiral" },
-  { x: 0.3, y: 0.0, name: "Seahorse Valley" },
-  { x: -0.1592, y: 1.0317, name: "Needle" },
-  { x: -0.1011, y: 0.9563, name: "Satellite" },
-  
-  // Fractal vortexes
-  { x: -1.25066, y: 0.02012, name: "Mandelbrot Mini (Left Arm)" },
-  { x: -1.3107, y: 0.0659, name: "Mini Spiral Cluster" },
-  { x: -0.7435669, y: 0.1314023, name: "Double Spiral Galaxy" },
-  { x: -0.77568377, y: 0.13646737, name: "Whirlpool Cluster" },
-  { x: -0.7435, y: 0.1314, name: "Celtic Spiral" },
-  { x: -0.8008, y: 0.166, name: "Spiral Nebula" },
-  { x: -0.748, y: 0.1, name: "Micro Spiral Chain" },
-  { x: -0.744, y: 0.133, name: "The Heart of Spirals" },
-  
-  // Organic shapes
-  { x: -1.543689012, y: 0.00005204, name: "Tendril Canyon" },
-  { x: -1.05, y: 0.266, name: "Coral Branching" },
-  { x: -1.38, y: 0.005, name: "Root Forest" },
-  { x: -0.17, y: 1.05, name: "Northern Needle" },
-  { x: -0.1592, y: -1.0317, name: "Southern Needle" },
-  { x: -0.1015, y: -0.956, name: "Southern Satellite" },
-
-  // Ultra-deep “microcosms” (great for slow autozoom)
-  { x: -0.743643887037158704752191506114774, y: 0.131825904205311970493132056385139, name: "Deep Valley of Spirals (Zoom-Ready)" },
-  { x: -0.743643887037151, y: 0.13182590420533, name: "Deep Spiral Cluster" },
-  { x: -0.7435669, y: 0.1314023, name: "Galactic Core" },
-  { x: -1.94006, y: 0.0001, name: "Far Tendril Island" },
-  { x: -0.77568377, y: 0.13646737, name: "Whirlpool Nexus" },
-  
-  // Aesthetic symmetry / interesting geometry
-  { x: -0.1011, y: 0.9563, name: "Butterfly Wing" },
-  { x: -0.745, y: 0.113, name: "Heart Filigree" },
-  { x: -0.7451, y: 0.112, name: "Elephant’s Eye" },
-  { x: -0.800, y: 0.15, name: "Spiral Cathedral" },
-  { x: -1.25, y: 0.02, name: "Mini Mandelbrot (Left Arm)" },
-  { x: -1.05, y: 0.31, name: "Seaweed Garden" },
-  { x: 0.27334, y: 0.00742, name: "Seahorse Tail" },
-  { x: -0.74529, y: 0.113075, name: "Fractal Bloom" },
-  { x: -0.11125, y: 0.894, name: "Mushroom Valley" },
-  { x: -0.747, y: 0.109, name: "Fractal Fireworks" },
-  { x: -0.7453, y: 0.1127, name: "Elephant Canyon" },
-  { x: -1.77, y: 0.0, name: "Outer Filament" },
-  { x: -1.401155, y: 0.0, name: "Necklace Cluster" },
-];
-
 let currentPointIndex = 0;
 const randomExploreMode = ref(true);
 
-const mandel = () => {
+const mandel = () => {  
   if (!canvas.value) return;
   const context = canvas.value.getContext('2d');
   const currentPalette = palette.value;
@@ -591,14 +494,14 @@ const reset = () => {
   currentPointIndex = 0;
   sameFrameCount = 0;
   previousFrameData = null;
-  selectedRegion.value = null;
+  selectedRegion.value = 0;
   mandel();
 };
 
 const jumpToRegion = () => {
-  if (selectedRegion.value === null) return;
+  if (selectedRegion.value === 0) return;
   if (isAutoZooming.value) toggleAutoZoom();
-  currentPointIndex = selectedRegion.value;
+  currentPointIndex = parseInt(selectedRegion.value);
   sameFrameCount = 0;
   previousFrameData = null;
   const point = interestingPoints[currentPointIndex];
