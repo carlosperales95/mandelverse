@@ -146,7 +146,7 @@ let clickZoomTarget = null;
 let previousFrameData = null;
 let sameFrameCount = 0;
 const maxSameFrames = 200;
-const similarityThreshold = 0.95;
+const similarityThreshold = 0.97;
 
 const handleResize = () => {
   width.value = window.innerWidth;
