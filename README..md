@@ -34,4 +34,4 @@ npm run dev
 
 ## Is this hosted?
 It is publicly hosted and can be found here:
-https://mandeverse.netlify.app/
+https://mandelverse.netlify.app/
