@@ -12,7 +12,7 @@ where both **z** and **c** are complex numbers. A point **c** belongs to the Man
 
 When visualized, the Mandelbrot set reveals intricate, beautiful patterns that repeat endlessly, showing how complex structures can emerge from simple mathematical rules. 
 
-![](./src/assets/mandelbrot.gif)
+<img src="src/assets/mandelbrot.gif" width="100%" height="100%"/>
 
 With this simple website, I wanted to dive deeper into this great equation, and give the user total freedom to explore the set and find its beautiful and hidden visuals.
 
