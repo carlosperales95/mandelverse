@@ -1,6 +1,6 @@
 <template>
     <div>
-        <slot name="label"></slot>
+        <slot></slot>
         <select 
             v-model="selectedElem"
             class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-400 text-white" 

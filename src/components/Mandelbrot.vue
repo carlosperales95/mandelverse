@@ -7,9 +7,6 @@
       class="cursor-crosshair absolute inset-0"
       @mousedown="zoom"
     ></canvas>
-    
-    <!-- Menu Toggle -->
-   <MenuButton :show-menu="showMenu" @click="showMenu = !showMenu" />
 
     <!-- Info Badge -->
     <div class="fixed top-4 left-4 z-40 bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg">
@@ -19,121 +16,44 @@
 
     <!-- Warning Badge -->
     <div
-v-if="isAutoZooming && sameFrameCount > 0" 
-         class="fixed top-20 left-4 z-40 bg-orange-500/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg">
+      v-if="isAutoZooming && sameFrameCount > 0" 
+      class="fixed top-20 left-4 z-40 bg-orange-500/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm shadow-lg"
+    >
       ⚠ Boring region: {{ sameFrameCount }}/{{ maxSameFrames }}
     </div>
 
     <!-- Overlay Menu Panel -->
-    <transition name="slide">
-      <div v-if="showMenu" class="fixed right-0 top-0 h-full w-96 bg-black/90 backdrop-blur-md text-white z-40 overflow-y-auto shadow-2xl">
-        <div class="p-6 pt-20">
-          <h2 class="text-2xl font-bold mb-6 text-emerald-400">Controls</h2>
-          
-          <!-- Color Scheme -->
-          <SimpleSelector v-model="colorScheme" class="mb-6" :options="themeOptions" @change="mandel" >
-              <label class="block text-sm font-semibold mb-2">
-                  Choose your Theme
-              </label>
-          </SimpleSelector>
-
-          <SimpleSelector v-model="selectedRegion" class="mb-6" :options="interestingPoints" @change="jumpToRegion">
-            <label class="block text-sm font-semibold mb-2">
-              Jump to Region
-            </label>
-          </SimpleSelector>
-
-          <!-- Control Buttons -->
-          <div class="space-y-3 mb-6">
-            <button 
-              :class="[
-                'w-full px-4 py-3 rounded-lg font-semibold transition-all',
-                isAutoZooming ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
-              ]" 
-              @click="toggleAutoZoom"
-            >
-              {{ isAutoZooming ? '⏸ Stop Auto Zoom' : '▶️ Start Auto Zoom' }}
-            </button>
-            
-            <button 
-              class="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all" 
-              @click="reset"
-            >
-              🔄 Reset View
-            </button>
-
-            <button 
-              :class="[
-                'w-full px-4 py-3 rounded-lg font-semibold transition-all',
-                clickAutoZoomMode ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-600 hover:bg-gray-700'
-              ]"
-              @click="clickAutoZoomMode = !clickAutoZoomMode"
-            >
-              {{ clickAutoZoomMode ? '✓ Click AutoZoom' : '✗ Click AutoZoom' }}
-            </button>
-
-            <button 
-              :class="[
-                'w-full px-4 py-3 rounded-lg font-semibold transition-all',
-                randomExploreMode ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-600 hover:bg-gray-700'
-              ]"
-              @click="randomExploreMode = !randomExploreMode"
-            >
-              {{ randomExploreMode ? '✓ Random Explore' : '✗ Random Explore' }}
-            </button>
-          </div>
-
-          <!-- Zoom Speed -->
-          <div class="mb-6">
-            <label class="block text-sm font-semibold mb-2">
-              Zoom Speed: {{ zoomSpeed }}ms ({{ Math.round(1000/zoomSpeed) }} fps)
-            </label>
-            <input 
-              v-model.number="zoomSpeed" 
-              type="range" 
-              min="16" 
-              max="200" 
-              step="16"
-              class="w-full"
-              :disabled="isAutoZooming"
-            />
-            <div class="flex justify-between text-xs opacity-75 mt-1">
-              <span>Fast (60fps)</span>
-              <span>Slow (5fps)</span>
-            </div>
-          </div>
-
-          <!-- Instructions -->
-          <div class="mt-8 p-4 bg-white/5 rounded-lg text-sm space-y-2">
-            <p class="font-semibold text-emerald-400">How to Use:</p>
-            <p>• Click anywhere to zoom in</p>
-            <p>• Enable Click AutoZoom for smooth zoom</p>
-            <p>• Auto Zoom explores interesting regions</p>
-            <p>• Random Explore jumps when bored</p>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <OverlayMenu
+      @change-theme="mandel"
+      @reset="reset"
+      @jump-region="jumpToRegion"
+      @play="toggleAutoZoom"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import MenuButton from './MenuButton.vue';
-import { themeOptions } from '@/content/themes';
-import SimpleSelector from './base/SimpleSelector.vue';
 import { interestingPoints } from '@/content/locations';
+import { useSettingsStore } from '@/stores/settings';
+import { storeToRefs } from 'pinia';
+import OverlayMenu from './OverlayMenu.vue';
 
 const canvas = ref(null);
 const xmin = ref(-2);
 const ymin = ref(-2);
 const scale = ref(80);
-const isAutoZooming = ref(false);
-const clickAutoZoomMode = ref(false);
-const zoomSpeed = ref(50);
-const colorScheme = ref('fire');
-const selectedRegion = ref(0);
-const showMenu = ref(false);
+
+const settings = useSettingsStore();
+
+const { 
+    zoomSpeed,
+    colorScheme,
+    isAutoZooming,
+    clickAutoZoomMode,
+    selectedRegion,
+    randomExploreMode
+} = storeToRefs(settings);
 
 const width = ref(window.innerWidth);
 const height = ref(window.innerHeight);
@@ -343,7 +263,6 @@ const hslToRgb = (h, s, l) => {
 
 const palette = computed(() => generatePalette(colorScheme.value));
 let currentPointIndex = 0;
-const randomExploreMode = ref(true);
 
 const mandel = () => {  
   if (!canvas.value) return;
@@ -524,13 +443,27 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.3s ease;
 }
 
-.slide-enter-from,
-.slide-leave-to {
-  transform: translateX(100%);
+.slide-right-enter-from {
+  transform: translateX(0);
+  opacity: 0;
 }
+.slide-right-enter-to {
+  transform: translateX(50%);
+  opacity: 1;
+}
+
+.slide-right-leave-from {
+  transform: translateX(50%);
+  opacity: 1;
+}
+.slide-right-leave-to {
+  transform: translateX(0);
+  opacity: 0;
+}
+
 </style>
