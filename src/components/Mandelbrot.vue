@@ -328,10 +328,9 @@ const skipToNextPoint = () => {
     ymin.value = point.y - 2;
     scale.value = 50;
     mandel();
-    toggleAutoZoom();
-  } else {
-    toggleAutoZoom();
   }
+  
+  toggleAutoZoom();
 };
 
 const zoom = (event) => {
@@ -441,29 +440,3 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
 });
 </script>
-
-<style scoped>
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-right-enter-from {
-  transform: translateX(0);
-  opacity: 0;
-}
-.slide-right-enter-to {
-  transform: translateX(50%);
-  opacity: 1;
-}
-
-.slide-right-leave-from {
-  transform: translateX(50%);
-  opacity: 1;
-}
-.slide-right-leave-to {
-  transform: translateX(0);
-  opacity: 0;
-}
-
-</style>
