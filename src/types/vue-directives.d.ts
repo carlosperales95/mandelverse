@@ -1,6 +1,6 @@
-import type { DirectiveBinding } from 'vue';
+import type { DirectiveBinding } from "vue";
 
-declare module 'vue' {
+declare module "vue" {
   interface ComponentCustomProperties {
     vTooltip: DirectiveBinding<string>;
   }

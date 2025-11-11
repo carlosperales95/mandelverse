@@ -1,106 +1,106 @@
 export const themeOptions = [
   {
-    code: 'rgb',
-    name: 'RGB (Classic)'
-  },
-    {
-    code: 'hacker',
-    name: 'Hacker'
-  },
-    {
-    code: 'matrix',
-    name: 'Matrix'
-  },
-    {
-    code: 'cyberpunk',
-    name: 'Cyberpunk'
-  },
-    {
-    code: 'matrix-pro',
-    name: 'Matrix (Pro)'
-  },
-    {
-    code: 'hacker-pro',
-    name: 'Hacker (Pro)'
-  },
-    {
-    code: 'cyberpunk-pro',
-    name: 'Cyberpunk (Pro)'
-  },
-    {
-    code: 'fire',
-    name: 'Fire'
-  },
-      {
-    code: 'firestorm',
-    name: 'Firestorm'
-  },
-    {
-    code: 'sunset',
-    name: 'Sunset'
+    code: "rgb",
+    name: "RGB (Classic)",
   },
   {
-    code: 'copper',
-    name: 'Copper'
+    code: "hacker",
+    name: "Hacker",
   },
-      {
-    code: 'cherry',
-    name: 'Cherry'
+  {
+    code: "matrix",
+    name: "Matrix",
   },
-    {
-    code: 'lavender',
-    name: 'Lavender'
+  {
+    code: "cyberpunk",
+    name: "Cyberpunk",
   },
-      {
-    code: 'royal',
-    name: 'Royal'
+  {
+    code: "matrix-pro",
+    name: "Matrix (Pro)",
   },
-    {
-    code: 'forest',
-    name: 'Forest'
+  {
+    code: "hacker-pro",
+    name: "Hacker (Pro)",
   },
-        {
-    code: 'mint',
-    name: 'Mint'
+  {
+    code: "cyberpunk-pro",
+    name: "Cyberpunk (Pro)",
   },
-      {
-    code: 'peacock',
-    name: 'Peacock'
+  {
+    code: "fire",
+    name: "Fire",
   },
-    {
-    code: 'aurora',
-    name: 'Aurora'
+  {
+    code: "firestorm",
+    name: "Firestorm",
   },
-    {
-    code: 'ocean',
-    name: 'Ocean'
+  {
+    code: "sunset",
+    name: "Sunset",
   },
-    {
-    code: 'oceanic',
-    name: 'Oceanic'
+  {
+    code: "copper",
+    name: "Copper",
   },
-      {
-    code: 'ice',
-    name: 'Ice'
+  {
+    code: "cherry",
+    name: "Cherry",
   },
-      {
-    code: 'glacier',
-    name: 'Glacier'
+  {
+    code: "lavender",
+    name: "Lavender",
   },
-      {
-    code: 'spectrum',
-    name: 'Spectrum'
+  {
+    code: "royal",
+    name: "Royal",
   },
-    {
-    code: 'rainbow',
-    name: 'Rainbow'
+  {
+    code: "forest",
+    name: "Forest",
   },
-      {
-    code: 'midnight',
-    name: 'Midnight'
+  {
+    code: "mint",
+    name: "Mint",
   },
-        {
-    code: 'grayscale',
-    name: 'Grayscale'
-  }
-]
+  {
+    code: "peacock",
+    name: "Peacock",
+  },
+  {
+    code: "aurora",
+    name: "Aurora",
+  },
+  {
+    code: "ocean",
+    name: "Ocean",
+  },
+  {
+    code: "oceanic",
+    name: "Oceanic",
+  },
+  {
+    code: "ice",
+    name: "Ice",
+  },
+  {
+    code: "glacier",
+    name: "Glacier",
+  },
+  {
+    code: "spectrum",
+    name: "Spectrum",
+  },
+  {
+    code: "rainbow",
+    name: "Rainbow",
+  },
+  {
+    code: "midnight",
+    name: "Midnight",
+  },
+  {
+    code: "grayscale",
+    name: "Grayscale",
+  },
+];

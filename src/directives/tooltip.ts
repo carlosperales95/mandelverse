@@ -1,4 +1,4 @@
-import type { Directive, DirectiveBinding } from 'vue';
+import type { Directive, DirectiveBinding } from "vue";
 
 interface TooltipElement extends HTMLElement {
   _tooltip?: HTMLDivElement;
@@ -11,8 +11,8 @@ interface TooltipElement extends HTMLElement {
 export const tooltip: Directive<TooltipElement, string> = {
   mounted(el: TooltipElement, binding: DirectiveBinding<string>) {
     // Create tooltip element
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'tooltip';
+    const tooltipEl = document.createElement("div");
+    tooltipEl.className = "tooltip";
     tooltipEl.textContent = binding.value;
     tooltipEl.style.cssText = `
       position: fixed;
@@ -38,17 +38,17 @@ export const tooltip: Directive<TooltipElement, string> = {
       const rect = el.getBoundingClientRect();
       tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
       tooltipEl.style.top = `${rect.top - 10}px`;
-      tooltipEl.style.transform = 'translate(-50%, -100%)';
-      tooltipEl.style.opacity = '1';
+      tooltipEl.style.transform = "translate(-50%, -100%)";
+      tooltipEl.style.opacity = "1";
     };
 
     // Hide tooltip on mouseleave
     const hideTooltip = () => {
-      tooltipEl.style.opacity = '0';
+      tooltipEl.style.opacity = "0";
     };
 
-    el.addEventListener('mouseenter', showTooltip);
-    el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener("mouseenter", showTooltip);
+    el.addEventListener("mouseleave", hideTooltip);
 
     // Store handlers for cleanup
     el._tooltipHandlers = { showTooltip, hideTooltip };
@@ -66,8 +66,8 @@ export const tooltip: Directive<TooltipElement, string> = {
       el._tooltip.remove();
     }
     if (el._tooltipHandlers) {
-      el.removeEventListener('mouseenter', el._tooltipHandlers.showTooltip);
-      el.removeEventListener('mouseleave', el._tooltipHandlers.hideTooltip);
+      el.removeEventListener("mouseenter", el._tooltipHandlers.showTooltip);
+      el.removeEventListener("mouseleave", el._tooltipHandlers.hideTooltip);
     }
-  }
+  },
 };
