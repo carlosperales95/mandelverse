@@ -6,4 +6,6 @@
 
 <script setup>
 import Mandelbrot from './components/Mandelbrot.vue'
+import './assets/main.css'
+
 </script>

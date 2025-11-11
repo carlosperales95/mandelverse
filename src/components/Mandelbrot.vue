@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { interestingPoints } from '@/content/locations';
 import { useSettingsStore } from '@/stores/settings';
 import { storeToRefs } from 'pinia';
@@ -52,21 +52,27 @@ const {
     isAutoZooming,
     clickAutoZoomMode,
     selectedRegion,
-    randomExploreMode
+    randomExploreMode,
+    // maxSameFrames,
+    // similarityThreshold,
+    // pixelScale,
 } = storeToRefs(settings);
+
+const maxSameFrames = 200;
+const similarityThreshold = 0.97;
+const pixelScale = 4;
 
 const width = ref(window.innerWidth);
 const height = ref(window.innerHeight);
-const pixelScale = 4;
 const gridWidth = computed(() => width.value / pixelScale);
 const gridHeight = computed(() => height.value / pixelScale);
+
+
 
 let autoZoomInterval = null;
 let clickZoomTarget = null;
 let previousFrameData = null;
 let sameFrameCount = 0;
-const maxSameFrames = 200;
-const similarityThreshold = 0.97;
 
 const handleResize = () => {
   width.value = window.innerWidth;
@@ -329,7 +335,7 @@ const skipToNextPoint = () => {
     scale.value = 50;
     mandel();
   }
-  
+
   toggleAutoZoom();
 };
 
@@ -431,7 +437,7 @@ const jumpToRegion = () => {
 };
 
 onMounted(() => {
-  mandel();
+  nextTick(() => mandel());
   window.addEventListener('resize', handleResize);
 });
 

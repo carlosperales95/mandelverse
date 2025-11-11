@@ -87,7 +87,22 @@
                       <ChevronDoubleRightIcon />
                     </BaseButton>
                     <div v-show="expandSpeedArea">
-                      <SpeedSlider v-model="zoomSpeed" :disabled="isAutoZooming" />
+                        <SimpleSlider v-model="zoomSpeed" :disabled="isAutoZooming" min="16" max="192" step="16" >
+                          <template #label>
+                            {{ formattedSpeed }}
+                          </template>
+                        </SimpleSlider>
+                        <!-- <SimpleSlider v-model="pixelScale" :disabled="isAutoZooming" min="0.1" max="10" step="0.1" >
+                            <template #label>
+                                <p>{{ pixelScale }}%</p>
+                            </template>
+                            <template #min>
+                                <span>Small (0.1)</span>
+                            </template>
+                            <template #max>
+                                <span>Big (10)</span>
+                            </template>
+                        </SimpleSlider> -->
                     </div>
                   </div>
                 </div>
@@ -154,15 +169,11 @@
 import { themeOptions } from '@/content/themes';
 import { interestingPoints } from '@/content/locations';
 import { ArrowPathIcon, PlayIcon, PauseIcon, ViewfinderCircleIcon, GlobeEuropeAfricaIcon, MapPinIcon, BeakerIcon, InformationCircleIcon, ChevronDoubleRightIcon, Bars3Icon, XMarkIcon } from '@heroicons/vue/24/solid';
-import BaseButton from './base/BaseButton.vue';
 import { useSettingsStore } from '@/stores/settings';
 import { storeToRefs } from 'pinia';
-import SpeedSlider from './base/SpeedSlider.vue';
 import SimpleSelector from './base/SimpleSelector.vue';
-
-defineProps<{
-
-}>();
+import BaseButton from '@/components/base/BaseButton.vue';
+import SimpleSlider from '@/components/base/SimpleSlider.vue';
 
 const emit = defineEmits(['change-theme', 'jump-region', 'reset', 'play']);
 
@@ -178,7 +189,11 @@ const {
     isAutoZooming,
     clickAutoZoomMode,
     selectedRegion,
-    randomExploreMode
+    randomExploreMode,
+    maxSameFrames,
+    similarityThreshold,
+    formattedSpeed,
+    pixelScale,
 } = storeToRefs(settings);
 </script>
 
