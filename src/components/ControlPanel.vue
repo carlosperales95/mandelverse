@@ -253,7 +253,7 @@
     <!-- Theme selctor -->
     <div
       v-if="expandThemeSelector"
-      class="absolute left-[60%] -top-14 z-50 bg-black/40 backdrop-blur-xl p-4"
+      class="absolute left-[60%] bottom-[40%] z-[9999] bg-black/40 backdrop-blur-xl p-4"
     >
       <SimpleSelector
         v-model="colorScheme"
