@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen bg-black">
-    <Mandelbrot />
+    <MandelverseExplorer />
   </div>
 </template>
 
 <script setup>
-import Mandelbrot from "./components/Mandelbrot.vue";
 import "./assets/main.css";
+import MandelverseExplorer from "./views/MandelverseExplorer.vue";
 </script>

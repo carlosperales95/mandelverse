@@ -8,10 +8,11 @@ export const useSettingsStore = defineStore(
     const expandControlPanel = ref(false);
     const expandSpeedArea = ref(false);
     const expandLocationArea = ref(false);
+    const expandThemeSelector = ref(false);
 
     const colorScheme = ref<string>("fire");
     const maxSameFrames = ref(200);
-    const similarityThreshold = ref<number>(0.97);
+    const similarityThreshold = ref<number>(1);
     const zoomSpeed = ref(50);
 
     const selectedRegion = ref<number>(0);
@@ -21,6 +22,10 @@ export const useSettingsStore = defineStore(
 
     const moveSpeed = ref(0.05);
     const zoomFactor = ref(1.01);
+
+    const currentPointIndex = ref(0);
+    const scale = ref(10);
+    const sameFrameCount = ref(0);
 
     const isExpanded = computed(() => expandControlPanel.value);
     const formattedSpeed = computed(
@@ -37,6 +42,10 @@ export const useSettingsStore = defineStore(
 
     function toggleExpandControlPanel() {
       expandControlPanel.value = !expandControlPanel.value;
+    }
+
+    function toggleExpandThemeSelector() {
+      expandThemeSelector.value = !expandThemeSelector.value;
     }
 
     function toggleExpandLocationArea() {
@@ -83,6 +92,11 @@ export const useSettingsStore = defineStore(
       similarityThreshold,
       moveSpeed,
       zoomFactor,
+      currentPointIndex,
+      scale,
+      sameFrameCount,
+      expandThemeSelector,
+      toggleExpandThemeSelector,
       togglePanel,
       toggleExpandControlPanel,
       setZoomSpeed,
