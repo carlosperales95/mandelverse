@@ -18,12 +18,15 @@ With this simple website, I wanted to dive deeper into this great equation, and 
 
 ## Features
 
-- Interactive zooming by clicking
-- Auto-zoom mode to explore fractal regions
-- Pre-defined interesting fractal locations
-- Random exploration mode
+- Automatic Zoom to clicked point on set
+- Automatic zoom to selected region of set
+- Pre-defined interesting fractal regions
+- Random exploration mode (automatic jump through regions)
+- Record explorer and export as `.webm` or `.gif`
+- Zoom behavior settings
 - Boring region detection
-- Multiple color schemes
+- Multiple color themes
+- Mobile friendly!
 
 ## How to run it locally?
 
