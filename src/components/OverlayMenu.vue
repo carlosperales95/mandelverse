@@ -1,6 +1,7 @@
 <template>
   <div
-    class="flex flex-col fixed bottom-40 h-64 w-full z-50 md:min-h-72 sm:bottom-24"
+    class="fixed inset-0 z-50 flex flex-col items-center justify-end bottom-10 md:min-h-72 sm:bottom-24"
+    :class="{ 'pointer-events-none': !showControlPanel }"
   >
     <Transition
       enter-active-class="transition duration-300 ease-out"
@@ -12,7 +13,7 @@
     >
       <div
         v-show="showControlPanel"
-        class="min-h-80 w-full flex justify-center overflow-hidden md:min-h-72"
+        class="min-h-80 w-full flex justify-center overflow-hidden md:min-h-72 pointer-events-auto"
       >
         <ControlPanel
           @change-theme="emit('change-theme')"
@@ -22,7 +23,9 @@
         ></ControlPanel>
       </div>
     </Transition>
-    <MenuButton :open="showControlPanel" @click="settings.togglePanel" />
+    <div class="pointer-events-auto z-60 w-full h-fit">
+      <MenuButton :open="showControlPanel" @click="settings.togglePanel" />
+    </div>
   </div>
 </template>
 
