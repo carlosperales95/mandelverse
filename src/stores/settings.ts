@@ -10,7 +10,6 @@ export const useSettingsStore = defineStore(
     const expandLocationArea = ref(false);
     const expandThemeSelector = ref(false);
 
-    const colorScheme = ref<string>("fire");
     const maxSameFrames = ref(200);
     const similarityThreshold = ref<number>(1);
     const zoomSpeed = ref(50);
@@ -26,6 +25,11 @@ export const useSettingsStore = defineStore(
     const currentPointIndex = ref(0);
     const scale = ref(10);
     const sameFrameCount = ref(0);
+
+    const maxIterations = ref(255);
+    const pixelScale = ref(4);
+
+    const mode = ref("video");
 
     const isExpanded = computed(() => expandControlPanel.value);
     const formattedSpeed = computed(
@@ -59,10 +63,6 @@ export const useSettingsStore = defineStore(
       zoomSpeed.value = speed;
     }
 
-    function setColorScheme(scheme: string) {
-      colorScheme.value = scheme;
-    }
-
     function toggleClickAutoZoomMode() {
       clickAutoZoomMode.value = !clickAutoZoomMode.value;
     }
@@ -81,7 +81,6 @@ export const useSettingsStore = defineStore(
       expandSpeedArea,
       expandLocationArea,
       zoomSpeed,
-      colorScheme,
       isExpanded,
       formattedSpeed,
       clickAutoZoomMode,
@@ -95,12 +94,14 @@ export const useSettingsStore = defineStore(
       currentPointIndex,
       scale,
       sameFrameCount,
+      maxIterations,
       expandThemeSelector,
+      pixelScale,
+      mode,
       toggleExpandThemeSelector,
       togglePanel,
       toggleExpandControlPanel,
       setZoomSpeed,
-      setColorScheme,
       toggleClickAutoZoomMode,
       toggleAutoZoom,
       toggleExpandLocationArea,

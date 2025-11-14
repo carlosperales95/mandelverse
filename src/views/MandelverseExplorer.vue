@@ -22,61 +22,17 @@
       @play="toggleAutoZoom"
     />
 
-    <!-- Recording Button -->
-    <button
-      class="group fixed top-8 right-8 bg-black/60 text-white rounded-full hover:bg-black/80 transition-all duration-300 shadow-lg border-2 p-3 z-50"
-      :class="isRecording ? 'border-red-500 animate-pulse' : 'border-white'"
-      @click="toggleRecording"
-    >
-      <VideoCameraIcon v-if="!isRecording" class="h-6 w-6" />
-      <StopIcon v-else class="h-6 w-6 text-red-500" />
-    </button>
+    <RecordButton :is-recording="isRecording" @click="toggleRecording" />
+    <RecordingBadge
+      :is-recording="isRecording"
+      :recording-time="recordingTime"
+    />
 
-    <!-- Recording Indicator -->
-    <div
-      v-if="isRecording"
-      class="fixed top-8 left-8 bg-red-500/80 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-pulse z-50"
-    >
-      <div class="w-3 h-3 bg-white rounded-full"></div>
-      <span class="font-semibold">Recording {{ recordingTime }}</span>
-    </div>
-
-    <!-- Export Options Modal -->
-    <div
+    <ExportRecordingModal
       v-if="showExportOptions"
-      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-      @click.self="showExportOptions = false"
-    >
-      <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Export Recording</h2>
-        <p class="text-gray-600 mb-6">Choose your export format:</p>
-
-        <div class="space-y-3">
-          <button
-            class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-between"
-            @click="downloadAsWebM"
-          >
-            <span>Download as WebM (Video)</span>
-            <span class="text-sm opacity-80">Best Quality</span>
-          </button>
-
-          <button
-            class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-between"
-            @click="downloadAsGIF"
-          >
-            <span>Download as GIF</span>
-            <span class="text-sm opacity-80">Easy Sharing</span>
-          </button>
-        </div>
-
-        <button
-          class="w-full mt-4 text-gray-600 hover:text-gray-800 font-medium py-2"
-          @click="showExportOptions = false"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+      @close="showExportOptions = false"
+      @download="handleDownload"
+    />
   </div>
 </template>
 
@@ -88,17 +44,22 @@ import { storeToRefs } from "pinia";
 import OverlayMenu from "@/components/OverlayMenu.vue";
 import Decimal from "decimal.js";
 import Mandelbrot from "@/components/Mandelbrot.vue";
-import { VideoCameraIcon, StopIcon } from "@heroicons/vue/24/solid";
+import RecordButton from "@/components/RecordButton.vue";
+import RecordingBadge from "@/components/RecordingBadge.vue";
+import ExportRecordingModal from "@/components/ExportRecordingModal.vue";
+import { useThemesStore } from "@/stores/themes";
 
 const canvas = ref(null);
 const xmin = ref(-2);
 const ymin = ref(-2);
 
 const settings = useSettingsStore();
+const themes = useThemesStore();
+
+const { colorScheme, palette, fillMode } = storeToRefs(themes);
 
 const {
   zoomSpeed,
-  colorScheme,
   isAutoZooming,
   clickAutoZoomMode,
   selectedRegion,
@@ -110,6 +71,9 @@ const {
   currentPointIndex,
   scale,
   sameFrameCount,
+  maxIterations,
+  pixelScale,
+  mode,
 } = storeToRefs(settings);
 
 // Recording state
@@ -122,13 +86,15 @@ const showExportOptions = ref(false);
 let recordingInterval = null;
 let recordingStartTime = 0;
 let gifCaptureInterval = null;
-
-const pixelScale = 4;
+const currentPixelScale = computed(() => {
+  if (mode.value === "video") return 4;
+  return pixelScale.value;
+});
 
 const width = ref(window.innerWidth);
 const height = ref(window.innerHeight);
-const gridWidth = computed(() => width.value / pixelScale);
-const gridHeight = computed(() => height.value / pixelScale);
+const gridWidth = computed(() => width.value / currentPixelScale.value);
+const gridHeight = computed(() => height.value / currentPixelScale.value);
 
 let autoZoomInterval = null;
 let clickZoomTarget = null;
@@ -140,272 +106,18 @@ const handleResize = () => {
   mandel();
 };
 
-const generatePalette = (scheme) => {
-  const palette = [];
-
-  for (let i = 0; i < 256; i++) {
-    let r, g, b;
-    const t = i / 255;
-
-    switch (scheme) {
-      case "fire":
-        if (t < 0.25) {
-          r = t * 4 * 255;
-          g = 0;
-          b = 0;
-        } else if (t < 0.5) {
-          r = 255;
-          g = (t - 0.25) * 4 * 255;
-          b = 0;
-        } else if (t < 0.75) {
-          r = 255;
-          g = 255;
-          b = (t - 0.5) * 4 * 255;
-        } else {
-          r = g = b = 255;
-        }
-        break;
-
-      case "ocean":
-        r = t * 200;
-        g = t * 255;
-        b = 150 + t * 105;
-        break;
-
-      case "sunset":
-        r = 255 - t * 100;
-        g = 100 + Math.sin(t * Math.PI) * 155;
-        b = 150 + t * 105;
-        break;
-
-      case "forest":
-        r = 34 + t * 150;
-        g = 139 + t * 80;
-        b = 34 + t * 60;
-        break;
-
-      case "lavender":
-        r = 150 + t * 105;
-        g = 100 + t * 155;
-        b = 200 + t * 55;
-        break;
-
-      case "copper":
-        r = 100 + t * 155;
-        g = 50 + t * 150;
-        b = 20 + t * 80;
-        break;
-
-      case "ice":
-        r = 255 - t * 100;
-        g = 255 - t * 80;
-        b = 255;
-        break;
-
-      case "cherry":
-        r = 255 - t * 50;
-        g = 182 + Math.sin(t * Math.PI) * 73;
-        b = 193 + t * 62;
-        break;
-
-      case "midnight":
-        r = 25 + t * 230;
-        g = 25 + t * 100;
-        b = 112 + t * 143;
-        break;
-
-      case "autumn":
-        if (t < 0.33) {
-          r = 139 + t * 3 * 116;
-          g = t * 3 * 100;
-          b = 0;
-        } else if (t < 0.66) {
-          r = 255;
-          g = 100 + (t - 0.33) * 3 * 155;
-          b = 0;
-        } else {
-          r = 255 - (t - 0.66) * 3 * 100;
-          g = 255 - (t - 0.66) * 3 * 155;
-          b = (t - 0.66) * 3 * 100;
-        }
-        break;
-
-      case "mint":
-        r = 152 - t * 100;
-        g = 251 - t * 51;
-        b = 152 + t * 50;
-        break;
-
-      case "peacock":
-        r = Math.sin(t * Math.PI) * 255;
-        g = 128 + Math.sin(t * Math.PI * 2) * 127;
-        b = 128 + Math.cos(t * Math.PI) * 127;
-        break;
-
-      case "rainbow": {
-        const rgb = hslToRgb(t, 1, 0.5);
-        [r, g, b] = rgb;
-        break;
-      }
-
-      case "grayscale":
-        r = g = b = i;
-        break;
-
-      case "rgb":
-        if (i < 85) {
-          r = i * 3;
-          g = 0;
-          b = 0;
-        } else if (i < 171) {
-          r = 0;
-          g = 3 * (i - 84);
-          b = 0;
-        } else {
-          r = 0;
-          g = 0;
-          b = 3 * (i - 170);
-        }
-        break;
-
-      case "hacker":
-        r = 0;
-        g = 255 * t;
-        b = 255 * Math.pow(t, 2);
-        break;
-
-      case "matrix": {
-        // Matrix: black → deep green → neon green → slight cyan glow
-        const gamma = Math.pow(t, 2.2); // nonlinear ramp for darker darks
-        r = 0;
-        g = Math.min(255, Math.floor(255 * Math.pow(gamma, 0.5))); // brighter neon effect
-        b = Math.floor(50 * gamma); // subtle bluish tint near bright end
-        break;
-      }
-
-      case "matrix-pro": {
-        const intensity = Math.pow(t, 3);
-        r = Math.floor(10 * intensity);
-        g = Math.floor(255 * Math.pow(t, 0.6));
-        b = Math.floor(40 * Math.pow(t, 1.5));
-        break;
-      }
-
-      case "hacker-pro": {
-        // Hacker: deep black → lime → white-green glow
-        const glow = Math.pow(t, 1.8); // smoother mid transition
-        r = Math.floor(80 * glow); // tiny red for warmth
-        g = Math.floor(255 * Math.pow(t, 0.5)); // fast bright ramp for lime
-        b = Math.floor(120 * glow); // subtle green-blue hint
-        break;
-      }
-
-      case "cyberpunk-pro": {
-        // Cyberpunk: magenta → violet → cyan glow
-        const glow = Math.pow(t, 0.8);
-        r = Math.floor(255 - 155 * glow); // magenta to purple
-        g = Math.floor(50 + 150 * Math.pow(t, 2)); // purple to cyan tone
-        b = Math.floor(180 + 75 * glow); // bright neon cyan accent
-        break;
-      }
-
-      case "firestorm": {
-        // Black → deep red → orange → yellow → white
-        const t2 = Math.pow(t, 0.6);
-        r = Math.floor(255 * t2);
-        g = Math.floor(120 * Math.pow(t, 2));
-        b = Math.floor(30 * Math.pow(t, 3));
-        break;
-      }
-
-      case "oceanic": {
-        // Dark navy → blue → turquoise → white
-        const t2 = Math.pow(t, 0.8);
-        r = Math.floor(20 + 100 * t2);
-        g = Math.floor(60 + 190 * Math.pow(t, 1.2));
-        b = Math.floor(150 + 105 * t2);
-        break;
-      }
-
-      case "aurora": {
-        // Indigo → green → cyan → magenta → white
-        const t2 = Math.pow(t, 0.7);
-        r = Math.floor(100 + 155 * Math.sin(2 * Math.PI * t2));
-        g = Math.floor(200 * Math.pow(t2, 0.8));
-        b = Math.floor(255 * Math.pow(1 - t2, 0.5));
-        break;
-      }
-
-      case "glacier": {
-        // Near black → steel blue → ice white
-        const intensity = Math.pow(t, 1.5);
-        r = Math.floor(100 * intensity);
-        g = Math.floor(180 * Math.pow(t, 0.8));
-        b = Math.floor(255 * Math.pow(t, 0.5));
-        break;
-      }
-
-      case "royal": {
-        // Deep purple → violet → gold → white
-        const t2 = Math.pow(t, 0.6);
-        r = Math.floor(180 + 75 * t2);
-        g = Math.floor(80 + 100 * Math.pow(t, 1.5));
-        b = Math.floor(200 * (1 - t2));
-        break;
-      }
-
-      case "spectrum": {
-        // Rainbow cycle
-        const hue = t * 360;
-        const c = (h) =>
-          Math.floor(128 + 127 * Math.sin(((h + hue) * Math.PI) / 180));
-        r = c(0);
-        g = c(120);
-        b = c(240);
-        break;
-      }
-
-      case "cyberpunk":
-        r = 255 - t * 155;
-        g = t * 200;
-        b = 255;
-        break;
-
-      default:
-        r = g = b = i;
-    }
-
-    palette[i] =
-      `#${Math.floor(r).toString(16).padStart(2, "0")}${Math.floor(g).toString(16).padStart(2, "0")}${Math.floor(b).toString(16).padStart(2, "0")}`;
-  }
-
-  return palette;
+const handleDownload = (format) => {
+  if (format === "gif") downloadAsGIF();
+  if (format === "webm") downloadAsWebM();
 };
-
-const hslToRgb = (h, s, l) => {
-  let r, g, b;
-  const hue2rgb = (p, q, t) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-  };
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  r = hue2rgb(p, q, h + 1 / 3);
-  g = hue2rgb(p, q, h);
-  b = hue2rgb(p, q, h - 1 / 3);
-  return [r * 255, g * 255, b * 255];
-};
-
-const palette = computed(() => generatePalette(colorScheme.value));
 
 const mandel = () => {
   if (!canvas.value) return;
   const context = canvas.value.getContext("2d");
   const currentPalette = palette.value;
+
+  const currentMaxIterations =
+    mode.value === "video" ? 255 : maxIterations.value;
 
   for (let x = 0; x < gridWidth.value; x++) {
     for (let y = 0; y < gridHeight.value; y++) {
@@ -414,21 +126,37 @@ const mandel = () => {
         zy = 0;
       const cx = xmin.value + x / scale.value;
       const cy = ymin.value + y / scale.value;
+
       do {
         const xt = zx * zy;
         zx = zx * zx - zy * zy + cx;
         zy = 2 * xt + cy;
         i++;
-      } while (i < 255 && zx * zx + zy * zy < 4);
-      context.fillStyle = currentPalette[i];
+      } while (i < currentMaxIterations && zx * zx + zy * zy < 4);
+
+      const colorin = Math.floor((i / currentMaxIterations) * 255);
+
+      const colorIndex =
+        i >= currentMaxIterations
+          ? 0 // first color default set points
+          : colorin;
+
+      context.fillStyle =
+        fillMode.value == "full"
+          ? currentPalette[colorin]
+          : currentPalette[colorIndex];
       context.fillRect(
-        x * pixelScale,
-        height.value - y * pixelScale,
-        pixelScale,
-        pixelScale,
+        x * currentPixelScale.value,
+        height.value - y * currentPixelScale.value,
+        currentPixelScale.value,
+        currentPixelScale.value,
       );
     }
   }
+
+  /*         } while (i < 255 && zx * zx + zy * zy < 4);
+      context.fillStyle = currentPalette[i];
+ */
 
   if (isAutoZooming.value) checkFrameSimilarity();
 };
@@ -485,9 +213,10 @@ const zoom = (event) => {
   const rect = canvas.value.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
-  const cx = xmin.value + mouseX / pixelScale / scale.value;
+  const cx = xmin.value + mouseX / currentPixelScale.value / scale.value;
   const cy =
-    ymin.value + (gridHeight.value - mouseY / pixelScale) / scale.value;
+    ymin.value +
+    (gridHeight.value - mouseY / currentPixelScale.value) / scale.value;
 
   if (clickAutoZoomMode.value) {
     clickZoomTarget = { x: cx, y: cy };
@@ -763,9 +492,5 @@ const downloadAsGIF = async () => {
     console.error("Failed to create GIF:", error);
     alert("Failed to create GIF: " + error.message);
   }
-};
-
-const downloadRecording = () => {
-  downloadAsWebM();
 };
 </script>

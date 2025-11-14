@@ -12,19 +12,31 @@
             colors: ['indigo'],
           },
           {
-            name: 'Zoom',
-            current: currentTab == 'Zoom',
-            icon: AdjustmentsVerticalIcon,
+            name: 'Video',
+            current: currentTab == 'Video',
+            icon: VideoCameraIcon,
             colors: ['blue'],
           },
           {
-            name: 'Other',
-            current: currentTab == 'Other',
-            icon: Cog6ToothIcon,
+            name: 'Camera',
+            current: currentTab == 'Camera',
+            icon: CameraIcon,
             colors: ['emerald'],
           },
+          {
+            name: 'Theme',
+            current: currentTab == 'Theme',
+            icon: BeakerIcon,
+            colors: ['purple'],
+          },
         ]"
-        @selected="(name: any) => (currentTab = name)"
+        @selected="
+          (name: any) => {
+            currentTab = name;
+            if (name == 'Video') mode = 'video';
+            if (name == 'Camera') mode = 'photo';
+          }
+        "
       />
 
       <!-- Main Control Panel -->
@@ -147,8 +159,8 @@
             </div>
           </template>
 
-          <!-- Overall settings tab -->
-          <template v-if="currentTab === 'Zoom'">
+          <!-- Video -->
+          <template v-if="currentTab === 'Video'">
             <div class="mb-2 flex gap-2 w-full">
               <BaseButton
                 v-tooltip="'Zoom Speed settings'"
@@ -211,9 +223,83 @@
             </div>
           </template>
 
-          <!-- Others -->
-          <template v-if="currentTab === 'Other'">
-            <div class="mb-2 flex gap-2 w-full">Others</div>
+          <!-- Camera -->
+          <template v-if="currentTab === 'Camera'">
+            <div class="mb-2 flex gap-2 w-full">
+              <SimpleSlider
+                v-model="maxIterations"
+                :disabled="isAutoZooming"
+                min="1"
+                max="3000"
+                step="1"
+                @change="emit('change-theme')"
+              >
+                <template #label>
+                  <h3 class="font-semibold text-sm flex flex-col gap-1">
+                    Detail Iterations: {{ maxIterations }}
+                  </h3>
+                </template>
+              </SimpleSlider>
+              <SimpleSlider
+                v-model="pixelScale"
+                :disabled="isAutoZooming"
+                min="1"
+                max="10"
+                step="1"
+                @change="emit('change-theme')"
+              >
+                <template #label>
+                  <h3 class="font-semibold text-sm flex flex-col gap-1">
+                    Pixel Scale: {{ pixelScale }}
+                  </h3>
+                </template>
+              </SimpleSlider>
+            </div>
+          </template>
+
+          <template v-if="currentTab === 'Theme'">
+            <div class="mb-2 flex flex-col gap-3 w-full">
+              <div>
+                <h3 class="font-semibold text-sm flex flex-col gap-1">
+                  Color Theme
+                </h3>
+                <SimpleSelector
+                  v-model="colorScheme"
+                  class="w-full flex gap-1"
+                  :options="themeOptions"
+                  @change="emit('change-theme')"
+                />
+              </div>
+              <div>
+                <h3 class="font-semibold text-sm flex flex-col gap-1">
+                  Fill Mode
+                </h3>
+                <div class="flex gap-1 rounded-2xl">
+                  <BaseButton
+                    :active="fillMode === 'full'"
+                    :colors="['red']"
+                    @click="
+                      {
+                        fillMode = 'border';
+                        emit('change-theme');
+                      }
+                    "
+                    >Border</BaseButton
+                  >
+                  <BaseButton
+                    :active="fillMode === 'border'"
+                    :colors="['indigo']"
+                    @click="
+                      {
+                        fillMode = 'full';
+                        emit('change-theme');
+                      }
+                    "
+                    >Full</BaseButton
+                  >
+                </div>
+              </div>
+            </div>
           </template>
         </div>
       </div>
@@ -279,6 +365,8 @@ import {
   ChevronDoubleRightIcon,
   AdjustmentsVerticalIcon,
   Cog6ToothIcon,
+  CameraIcon,
+  VideoCameraIcon,
 } from "@heroicons/vue/24/solid";
 import SimpleSelector from "@/components/base/SimpleSelector.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
@@ -287,6 +375,7 @@ import BaseTabs from "@/components/base/BaseTabs.vue";
 import { useSettingsStore } from "@/stores/settings";
 import { storeToRefs } from "pinia";
 import { ref } from "vue";
+import { useThemesStore } from "@/stores/themes";
 
 const emit = defineEmits(["change-theme", "jump-region", "reset", "play"]);
 
@@ -295,9 +384,7 @@ const settings = useSettingsStore();
 const {
   expandControlPanel,
   expandSpeedArea,
-  expandLocationArea,
   zoomSpeed,
-  colorScheme,
   isAutoZooming,
   clickAutoZoomMode,
   selectedRegion,
@@ -311,8 +398,15 @@ const {
   sameFrameCount,
   scale,
   expandThemeSelector,
+  maxIterations,
+  pixelScale,
+  mode,
 } = storeToRefs(settings);
 
-type SettingsTab = "Discovery" | "Zoom" | "Other";
+const themes = useThemesStore();
+
+const { colorScheme, fillMode } = storeToRefs(themes);
+
+type SettingsTab = "Discovery" | "Video" | "Camera" | "Theme";
 const currentTab = ref<SettingsTab>("Discovery");
 </script>

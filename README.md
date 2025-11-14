@@ -2,6 +2,8 @@
 
 An interactive Mandelbrot fractal explorer built with Vue 3.
 
+<img src="src/assets/detailed-example-photo.png" width="100%" height="100%"/>
+
 The Mandelbrot set is a famous fractal — a complex, infinitely detailed mathematical shape that exhibits self-similarity at every scale. It’s defined by iterating the simple equation
 
 $$
@@ -12,9 +14,14 @@ where both **z** and **c** are complex numbers. A point **c** belongs to the Man
 
 When visualized, the Mandelbrot set reveals intricate, beautiful patterns that repeat endlessly, showing how complex structures can emerge from simple mathematical rules. 
 
-<img src="src/assets/mandelbrot.gif" width="100%" height="100%"/>
 
-With this simple website, I wanted to dive deeper into this great equation, and give the user total freedom to explore the set and find its beautiful and hidden visuals.
+
+With this simple website, I wanted to dive deeper into this great equation, and give the user total freedom to explore the set and find its beautiful and hidden visuals. 
+
+> [!IMPORTANT]  
+> The video detail settings are limited to ensure there are no performance issues and runs smoothly. Adding more iterations and smaller pixel scale takes a big hit on CPU usage. I am planning on optimizing this in the future, but for now we keep video settings limited.
+
+<img src="src/assets/mandelbrot.gif" width="100%" height="100%"/>
 
 ## Features
 
