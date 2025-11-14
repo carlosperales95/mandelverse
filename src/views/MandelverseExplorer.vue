@@ -35,8 +35,10 @@
       />
     </template>
     <template v-else>
-      <ScreenshotButton
-        :is-capturing="isCapturingScreenshot"
+      <ScreenshotButton @click="showExportOptions = true" />
+      <ExportScreenshotModal
+        v-if="showExportOptions"
+        @close="showExportOptions = false"
         @screenshot="takeScreenshot('png')"
         @screenshot-jpg="takeScreenshot('jpeg')"
         @screenshot-hq="takeHighQualityScreenshot(2)"
@@ -60,6 +62,7 @@ import RecordingBadge from "@/components/RecordingBadge.vue";
 import ExportRecordingModal from "@/components/ExportRecordingModal.vue";
 import { useThemesStore } from "@/stores/themes";
 import ScreenshotButton from "@/components/ScreenshotButton.vue";
+import ExportScreenshotModal from "@/components/ExportScreenshotModal.vue";
 
 const canvas = ref(null);
 const xmin = ref(-2);
@@ -519,7 +522,6 @@ const isCapturingScreenshot = ref(false);
 // Screenshot function
 const takeScreenshot = (format = "png") => {
   if (!canvas.value) return;
-
   isCapturingScreenshot.value = true;
 
   try {
@@ -560,6 +562,8 @@ const takeHighQualityScreenshot = async (scaleFactor = 2) => {
   isCapturingScreenshot.value = true;
 
   try {
+    const button = event.target.closest("button");
+    if (button) button.textContent = "Creating HQ";
     // Create a temporary high-res canvas
     const tempCanvas = document.createElement("canvas");
     const tempWidth = width.value * scaleFactor;
@@ -603,6 +607,10 @@ const takeHighQualityScreenshot = async (scaleFactor = 2) => {
           tempPixelScale,
           tempPixelScale,
         );
+
+        if (button) {
+          button.textContent = `Creating HQ... ${Math.round((((x + 1) * (y + 1)) / (tempGridWidth * tempGridHeight)) * 100)}%`;
+        }
       }
     }
 
