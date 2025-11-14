@@ -18,13 +18,14 @@
 <script setup lang="ts">
 import { type Component } from "vue";
 
-defineProps<{
+const props = defineProps<{
   tabs: {
     name?: string;
     icon?: Component;
     current: boolean;
     colors: string[];
   }[];
+  direction: "column" | "row";
 }>();
 
 const emit = defineEmits(["selected"]);
@@ -40,7 +41,10 @@ function getTabClass(tab: {
     tab.current
       ? `tab-${activeColor} border-black`
       : `tab-${inactiveColor} backdrop-blur-xl border-gray-100`,
-    "whitespace-nowrap p-2 rounded-tl-xl rounded-bl-sm border border-r-0 py-3",
+    props.direction == "column"
+      ? "rounded-tl-xl rounded-bl-sm border-r-0"
+      : "rounded-t-xl border border-b-0",
+    "whitespace-nowrap p-2 border py-3",
   ];
 }
 </script>

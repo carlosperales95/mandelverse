@@ -21,18 +21,29 @@
       @jump-region="jumpToRegion"
       @play="toggleAutoZoom"
     />
+    <template v-if="mode == 'video'">
+      <RecordButton :is-recording="isRecording" @click="toggleRecording" />
+      <RecordingBadge
+        :is-recording="isRecording"
+        :recording-time="recordingTime"
+      />
 
-    <RecordButton :is-recording="isRecording" @click="toggleRecording" />
-    <RecordingBadge
-      :is-recording="isRecording"
-      :recording-time="recordingTime"
-    />
-
-    <ExportRecordingModal
-      v-if="showExportOptions"
-      @close="showExportOptions = false"
-      @download="handleDownload"
-    />
+      <ExportRecordingModal
+        v-if="showExportOptions"
+        @close="showExportOptions = false"
+        @download="handleDownload"
+      />
+    </template>
+    <template v-else>
+      <ScreenshotButton
+        :is-capturing="isCapturingScreenshot"
+        @screenshot="takeScreenshot('png')"
+        @screenshot-jpg="takeScreenshot('jpeg')"
+        @screenshot-hq="takeHighQualityScreenshot(2)"
+        @screenshot-with-info="takeScreenshotWithInfo"
+        @copy-clipboard="copyScreenshotToClipboard"
+      />
+    </template>
   </div>
 </template>
 
@@ -48,6 +59,7 @@ import RecordButton from "@/components/RecordButton.vue";
 import RecordingBadge from "@/components/RecordingBadge.vue";
 import ExportRecordingModal from "@/components/ExportRecordingModal.vue";
 import { useThemesStore } from "@/stores/themes";
+import ScreenshotButton from "@/components/ScreenshotButton.vue";
 
 const canvas = ref(null);
 const xmin = ref(-2);
@@ -100,6 +112,7 @@ let autoZoomInterval = null;
 let clickZoomTarget = null;
 let previousFrameData = null;
 
+// Handlers
 const handleResize = () => {
   width.value = window.innerWidth;
   height.value = window.innerHeight;
@@ -111,6 +124,7 @@ const handleDownload = (format) => {
   if (format === "webm") downloadAsWebM();
 };
 
+// Paint mandelbrot
 const mandel = () => {
   if (!canvas.value) return;
   const context = canvas.value.getContext("2d");
@@ -161,6 +175,7 @@ const mandel = () => {
   if (isAutoZooming.value) checkFrameSimilarity();
 };
 
+// Frame Similarity function
 const checkFrameSimilarity = () => {
   if (!canvas.value) return;
   const ctx = canvas.value.getContext("2d");
@@ -238,12 +253,7 @@ const zoom = (event) => {
 
 const autoZoom = () => {
   const point = interestingPoints[currentPointIndex.value];
-  const centerX = xmin.value + gridWidth.value / scale.value / 2;
-  const centerY = ymin.value + gridHeight.value / scale.value / 2;
-  const newCenterX =
-    centerX + (new Decimal(point.x) - centerX) * moveSpeed.value;
-  const newCenterY =
-    centerY + (new Decimal(point.y) - centerY) * moveSpeed.value;
+  const { newCenterX, newCenterY } = centerToNewCenter(point);
   scale.value *= zoomFactor.value;
   const newViewSizeX = gridWidth.value / scale.value;
   const newViewSizeY = gridHeight.value / scale.value;
@@ -253,16 +263,24 @@ const autoZoom = () => {
 };
 
 const autoZoomToPoint = (target) => {
-  const centerX = xmin.value + gridWidth.value / scale.value / 2;
-  const centerY = ymin.value + gridHeight.value / scale.value / 2;
-  const newCenterX = centerX + (target.x - centerX) * moveSpeed.value;
-  const newCenterY = centerY + (target.y - centerY) * moveSpeed.value;
+  const { newCenterX, newCenterY } = centerToNewCenter(target);
   scale.value *= zoomFactor.value;
   const newViewSizeX = gridWidth.value / scale.value;
   const newViewSizeY = gridHeight.value / scale.value;
   xmin.value = newCenterX - newViewSizeX / 2;
   ymin.value = newCenterY - newViewSizeY / 2;
   mandel();
+};
+
+const centerToNewCenter = (point) => {
+  const centerX = xmin.value + gridWidth.value / scale.value / 2;
+  const centerY = ymin.value + gridHeight.value / scale.value / 2;
+  const newCenterX =
+    centerX + (new Decimal(point.x) - centerX) * moveSpeed.value;
+  const newCenterY =
+    centerY + (new Decimal(point.y) - centerY) * moveSpeed.value;
+
+  return { newCenterX, newCenterY };
 };
 
 const toggleAutoZoom = () => {
@@ -304,26 +322,6 @@ const jumpToRegion = () => {
   scale.value = gridWidth.value / viewSize;
   mandel();
 };
-
-onMounted(() => {
-  nextTick(() => mandel());
-  window.addEventListener("resize", handleResize);
-});
-
-onUnmounted(() => {
-  // Clean up recording if active
-  if (isRecording.value) {
-    stopRecording();
-  }
-  if (recordingInterval) {
-    clearInterval(recordingInterval);
-  }
-  if (gifCaptureInterval) {
-    clearInterval(gifCaptureInterval);
-  }
-  if (autoZoomInterval) clearInterval(autoZoomInterval);
-  window.removeEventListener("resize", handleResize);
-});
 
 // Recording functions
 const toggleRecording = () => {
@@ -491,6 +489,248 @@ const downloadAsGIF = async () => {
   } catch (error) {
     console.error("Failed to create GIF:", error);
     alert("Failed to create GIF: " + error.message);
+  }
+};
+
+// Lifecycle
+onMounted(() => {
+  nextTick(() => mandel());
+  window.addEventListener("resize", handleResize);
+});
+
+onUnmounted(() => {
+  // Clean up recording if active
+  if (isRecording.value) stopRecording();
+
+  if (recordingInterval) clearInterval(recordingInterval);
+
+  if (gifCaptureInterval) clearInterval(gifCaptureInterval);
+
+  if (autoZoomInterval) clearInterval(autoZoomInterval);
+
+  window.removeEventListener("resize", handleResize);
+});
+
+// Add these functions to your component's <script setup>
+
+// Screenshot state
+const isCapturingScreenshot = ref(false);
+
+// Screenshot function
+const takeScreenshot = (format = "png") => {
+  if (!canvas.value) return;
+
+  isCapturingScreenshot.value = true;
+
+  try {
+    // Get canvas data as blob
+    canvas.value.toBlob((blob) => {
+      if (!blob) {
+        console.error("Failed to create blob from canvas");
+        isCapturingScreenshot.value = false;
+        return;
+      }
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const timestamp = Date.now();
+      const location =
+        interestingPoints[currentPointIndex.value]?.name || "mandelbrot";
+      const filename = `${location.replace(/\s+/g, "-").toLowerCase()}-${timestamp}.${format}`;
+
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      isCapturingScreenshot.value = false;
+    }, `image/${format}`);
+  } catch (error) {
+    console.error("Screenshot failed:", error);
+    isCapturingScreenshot.value = false;
+  }
+};
+
+// High-quality screenshot (with optional upscaling)
+const takeHighQualityScreenshot = async (scaleFactor = 2) => {
+  if (!canvas.value) return;
+  isCapturingScreenshot.value = true;
+
+  try {
+    // Create a temporary high-res canvas
+    const tempCanvas = document.createElement("canvas");
+    const tempWidth = width.value * scaleFactor;
+    const tempHeight = height.value * scaleFactor;
+    tempCanvas.width = tempWidth;
+    tempCanvas.height = tempHeight;
+
+    const tempCtx = tempCanvas.getContext("2d");
+    const currentPalette = palette.value;
+    const tempGridWidth = tempWidth / currentPixelScale.value;
+    const tempGridHeight = tempHeight / currentPixelScale.value;
+    const tempPixelScale = currentPixelScale.value / scaleFactor;
+
+    // Render at higher resolution
+    for (let x = 0; x < tempGridWidth; x++) {
+      for (let y = 0; y < tempGridHeight; y++) {
+        let i = 0,
+          zx = 0,
+          zy = 0;
+        const cx = xmin.value + x / scale.value;
+        const cy = ymin.value + y / scale.value;
+
+        do {
+          const xt = zx * zy;
+          zx = zx * zx - zy * zy + cx;
+          zy = 2 * xt + cy;
+          i++;
+        } while (i < maxIterations.value && zx * zx + zy * zy < 4);
+
+        const colorin = Math.floor((i / maxIterations.value) * 255);
+        const colorIndex = i >= maxIterations.value ? 0 : colorin;
+
+        tempCtx.fillStyle =
+          fillMode.value === "full"
+            ? currentPalette[colorin]
+            : currentPalette[colorIndex];
+
+        tempCtx.fillRect(
+          x * tempPixelScale,
+          tempHeight - y * tempPixelScale,
+          tempPixelScale,
+          tempPixelScale,
+        );
+      }
+    }
+
+    // Download the high-res image
+    tempCanvas.toBlob((blob) => {
+      if (!blob) {
+        console.error("Failed to create high-res blob");
+        isCapturingScreenshot.value = false;
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const timestamp = Date.now();
+      const location =
+        interestingPoints[currentPointIndex.value]?.name || "mandelbrot";
+      const filename = `${location.replace(/\s+/g, "-").toLowerCase()}-hq-${timestamp}.png`;
+
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      isCapturingScreenshot.value = false;
+    }, "image/png");
+  } catch (error) {
+    console.error("High-quality screenshot failed:", error);
+    isCapturingScreenshot.value = false;
+  }
+};
+
+// Copy to clipboard (modern browsers)
+const copyScreenshotToClipboard = async () => {
+  if (!canvas.value) return;
+
+  try {
+    const blob = await new Promise((resolve) => {
+      canvas.value.toBlob(resolve, "image/png");
+    });
+
+    if (!blob) {
+      throw new Error("Failed to create blob");
+    }
+
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+
+    // Optional: Show success notification
+    console.log("Screenshot copied to clipboard!");
+    // You could add a toast notification here
+  } catch (error) {
+    console.error("Failed to copy to clipboard:", error);
+    alert(
+      "Failed to copy screenshot to clipboard. Your browser may not support this feature.",
+    );
+  }
+};
+
+// Screenshot with metadata overlay
+const takeScreenshotWithInfo = () => {
+  if (!canvas.value) return;
+
+  isCapturingScreenshot.value = true;
+
+  try {
+    // Create temporary canvas with metadata
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = width.value;
+    tempCanvas.height = height.value;
+    const tempCtx = tempCanvas.getContext("2d");
+
+    // Draw the mandelbrot canvas
+    tempCtx.drawImage(canvas.value, 0, 0);
+
+    // Add metadata overlay
+    const padding = 20;
+    const fontSize = 16;
+    const lineHeight = 22;
+
+    // Semi-transparent background
+    tempCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    tempCtx.fillRect(padding, padding, 300, 150);
+
+    // Text
+    tempCtx.fillStyle = "#ffffff";
+    tempCtx.font = `${fontSize}px monospace`;
+
+    const info = [
+      `Location: ${interestingPoints[currentPointIndex.value]?.name || "Custom"}`,
+      `X: ${xmin.value.toFixed(8)}`,
+      `Y: ${ymin.value.toFixed(8)}`,
+      `Scale: ${scale.value.toFixed(2)}`,
+      `Theme: ${colorScheme.value}`,
+      `Date: ${new Date().toLocaleDateString()}`,
+    ];
+
+    info.forEach((line, i) => {
+      tempCtx.fillText(line, padding + 10, padding + 30 + i * lineHeight);
+    });
+
+    // Download
+    tempCanvas.toBlob((blob) => {
+      if (!blob) {
+        console.error("Failed to create blob with info");
+        isCapturingScreenshot.value = false;
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const timestamp = Date.now();
+      const location =
+        interestingPoints[currentPointIndex.value]?.name || "mandelbrot";
+      const filename = `${location.replace(/\s+/g, "-").toLowerCase()}-info-${timestamp}.png`;
+
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      isCapturingScreenshot.value = false;
+    }, "image/png");
+  } catch (error) {
+    console.error("Screenshot with info failed:", error);
+    isCapturingScreenshot.value = false;
   }
 };
 </script>

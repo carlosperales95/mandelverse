@@ -1,7 +1,6 @@
 <template>
   <div
-    class="fixed inset-0 z-50 flex flex-col items-center justify-end bottom-10 md:min-h-72 sm:bottom-24"
-    :class="{ 'pointer-events-none': !showControlPanel }"
+    class="fixed inset-0 z-50 flex flex-col items-center justify-end bottom-10 md:min-h-72 sm:bottom-24 pointer-events-none"
   >
     <Transition
       enter-active-class="transition duration-300 ease-out"
@@ -13,9 +12,10 @@
     >
       <div
         v-show="showControlPanel"
-        class="min-h-80 w-full flex justify-center overflow-hidden md:min-h-72 pointer-events-auto"
+        class="min-h-80 w-full flex justify-center overflow-hidden md:min-h-72"
       >
         <ControlPanel
+          class="pointer-events-auto"
           @change-theme="emit('change-theme')"
           @jump-region="emit('jump-region')"
           @play="emit('play')"
@@ -24,7 +24,11 @@
       </div>
     </Transition>
     <div class="pointer-events-auto z-60 w-full h-fit">
-      <MenuButton :open="showControlPanel" @click="settings.togglePanel" />
+      <MenuButton
+        class="h-full w-full"
+        :open="showControlPanel"
+        @click="settings.togglePanel"
+      />
     </div>
   </div>
 </template>

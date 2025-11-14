@@ -1,8 +1,29 @@
 <template>
   <div class="flex flex-col md:w-3/4 w-full max-w-xl h-full mx-4">
+    <BaseTabs
+      class="flex w-full -gap-1 justify-end h-full pr-8"
+      :direction="'row'"
+      :tabs="[
+        {
+          name: 'Video',
+          current: mode == 'video',
+          icon: VideoCameraIcon,
+          colors: ['blue'],
+        },
+        {
+          name: 'Camera',
+          current: mode == 'camera',
+          icon: CameraIcon,
+          colors: ['emerald'],
+        },
+      ]"
+      @selected="(name: any) => (mode = name.toLowerCase())"
+    />
+
     <div class="relative flex items-start justify-center px-1 md:px-0">
       <!-- Tabs left -->
       <BaseTabs
+        :direction="'column'"
         class="flex flex-col w-fit -gap-1 justify-center h-full"
         :tabs="[
           {
@@ -12,16 +33,10 @@
             colors: ['indigo'],
           },
           {
-            name: 'Video',
-            current: currentTab == 'Video',
-            icon: VideoCameraIcon,
+            name: 'Settings',
+            current: currentTab == 'Settings',
+            icon: AdjustmentsVerticalIcon,
             colors: ['blue'],
-          },
-          {
-            name: 'Camera',
-            current: currentTab == 'Camera',
-            icon: CameraIcon,
-            colors: ['emerald'],
           },
           {
             name: 'Theme',
@@ -30,13 +45,7 @@
             colors: ['purple'],
           },
         ]"
-        @selected="
-          (name: any) => {
-            currentTab = name;
-            if (name == 'Video') mode = 'video';
-            if (name == 'Camera') mode = 'photo';
-          }
-        "
+        @selected="(name: any) => (currentTab = name)"
       />
 
       <!-- Main Control Panel -->
@@ -59,6 +68,7 @@
 
             <!-- Play/Pause -->
             <BaseButton
+              v-if="mode == 'video'"
               class="min-w-14"
               :active="isAutoZooming"
               :colors="['red', 'emerald']"
@@ -82,12 +92,6 @@
           </div>
           <!-- Extra btns -->
           <div class="flex gap-3 justify-end col-span-2">
-            <BeakerIcon
-              v-tooltip="'Change theme'"
-              class="h-8 w-8 my-auto"
-              :class="expandThemeSelector ? 'fill-emerald-400' : 'fill-white'"
-              @click="settings.toggleExpandThemeSelector"
-            />
             <InformationCircleIcon
               v-tooltip="'More info'"
               class="h-8 w-8 my-auto"
@@ -106,7 +110,7 @@
               :options="interestingPoints"
               @change="emit('jump-region')"
             />
-            <div class="mb-2 flex gap-2">
+            <div v-if="mode == 'video'" class="mb-2 flex gap-2">
               <BaseButton
                 class="min-w-14 min-h-14"
                 :active="randomExploreMode"
@@ -160,7 +164,7 @@
           </template>
 
           <!-- Video -->
-          <template v-if="currentTab === 'Video'">
+          <template v-if="currentTab === 'Settings' && mode == 'video'">
             <div class="mb-2 flex gap-2 w-full">
               <BaseButton
                 v-tooltip="'Zoom Speed settings'"
@@ -224,7 +228,7 @@
           </template>
 
           <!-- Camera -->
-          <template v-if="currentTab === 'Camera'">
+          <template v-if="currentTab === 'Settings' && mode == 'camera'">
             <div class="mb-2 flex gap-2 w-full">
               <SimpleSlider
                 v-model="maxIterations"
@@ -407,6 +411,6 @@ const themes = useThemesStore();
 
 const { colorScheme, fillMode } = storeToRefs(themes);
 
-type SettingsTab = "Discovery" | "Video" | "Camera" | "Theme";
+type SettingsTab = "Discovery" | "Settings" | "Theme";
 const currentTab = ref<SettingsTab>("Discovery");
 </script>
