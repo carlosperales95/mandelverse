@@ -39,11 +39,18 @@
       <ExportScreenshotModal
         v-if="showExportOptions"
         @close="showExportOptions = false"
-        @screenshot="takeScreenshot('png')"
-        @screenshot-jpg="takeScreenshot('jpeg')"
-        @screenshot-hq="takeHighQualityScreenshot(2)"
-        @screenshot-with-info="takeScreenshotWithInfo"
-        @copy-clipboard="copyScreenshotToClipboard"
+        @screenshot="screenshots.takeScreenshot('png', canvas)"
+        @screenshot-jpg="screenshots.takeScreenshot('jpeg', canvas)"
+        @screenshot-with-info="
+          screenshots.takeScreenshotWithInfo(canvas, width, height, {
+            location: interestingPoints[currentPointIndex].name || 'custom',
+            xmin: xmin,
+            ymin: ymin,
+            scale: scale,
+            colorScheme: colorScheme,
+          })
+        "
+        @copy-clipboard="screenshots.copyScreenshotToClipboard(canvas)"
       />
     </template>
   </div>
@@ -64,6 +71,7 @@ import { useThemesStore } from "@/stores/themes";
 import ScreenshotButton from "@/components/ScreenshotButton.vue";
 import ExportScreenshotModal from "@/components/ExportScreenshotModal.vue";
 import { useRecordingsStore } from "@/stores/recordings";
+import { useScreenshotsStore } from "@/stores/screenshots";
 
 const canvas = ref(null);
 const xmin = ref(-2);
@@ -72,6 +80,7 @@ const ymin = ref(-2);
 const settings = useSettingsStore();
 const themes = useThemesStore();
 const recordings = useRecordingsStore();
+const screenshots = useScreenshotsStore();
 
 const {
   isRecording,
@@ -104,8 +113,6 @@ const {
 // Recording state
 
 const isRendering = ref(false);
-
-let cachedTempCanvas = null;
 
 const currentPixelScale = computed(() => {
   /*   if (mode.value === "video") return 4; */
@@ -162,7 +169,6 @@ const initializeWorkerPool = () => {
 
   const count = adaptiveWorkerCount.value;
   workerPool.value = [];
-
   for (let i = 0; i < count; i++) {
     workerPool.value.push(createWorkerFromFunction(workerFunction));
   }
@@ -379,17 +385,15 @@ const mandel = async () => {
 
   try {
     // Initialize worker pool on first use
-    if (!isWorkerPoolInitialized.value) {
-      initializeWorkerPool();
-    }
+    if (!isWorkerPoolInitialized.value) initializeWorkerPool();
 
     const context = canvas.value.getContext("2d");
     const currentPalette = palette.value;
     /* const currentMaxIterations = mode.value === 'video' ? 255 : maxIterations.value; */
     const currentMaxIterations = getAdaptiveIterations();
 
-    const tempCanvas = getTempCanvas();
     // Create a temporary canvas to composite results
+    const tempCanvas = screenshots.getTempCanvas(gridWidth, gridHeight);
     tempCanvas.width = gridWidth.value;
     tempCanvas.height = gridHeight.value;
     const tempCtx = tempCanvas.getContext("2d", { alpha: false });
@@ -465,27 +469,28 @@ const autoZoom = () => {
   ymin.value = newCenterY - newViewSizeY / 2;
 
   mandel().then(() => {
-    if (isAutoZooming.value) {
-      animationFrameId = requestAnimationFrame(autoZoom);
-    }
+    if (!isAutoZooming.value) return;
+    animationFrameId = requestAnimationFrame(autoZoom);
   });
 };
 
 const toggleAutoZoom = () => {
   isAutoZooming.value = !isAutoZooming.value;
+
   if (isAutoZooming.value) {
     previousFrameData = null;
     sameFrameCount.value = 0;
-    autoZoom(); // Start with RAF instead of setInterval
-  } else {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
-    }
-    if (autoZoomInterval) {
-      clearInterval(autoZoomInterval);
-      autoZoomInterval = null;
-    }
+    autoZoom();
+    return;
+  }
+
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  if (autoZoomInterval) {
+    clearInterval(autoZoomInterval);
+    autoZoomInterval = null;
   }
 };
 
@@ -547,245 +552,6 @@ const toggleRecording = () => {
   }
 
   recordings.startRecording(canvas.value);
-};
-
-// Screenshot state
-const isCapturingScreenshot = ref(false);
-
-// Screenshot function
-const takeScreenshot = (format = "png") => {
-  if (!canvas.value) return;
-  isCapturingScreenshot.value = true;
-
-  try {
-    // Get canvas data as blob
-    canvas.value.toBlob((blob) => {
-      if (!blob) {
-        console.error("Failed to create blob from canvas");
-        isCapturingScreenshot.value = false;
-        return;
-      }
-
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const timestamp = Date.now();
-      const location =
-        interestingPoints[currentPointIndex.value]?.name || "mandelbrot";
-      const filename = `${location.replace(/\s+/g, "-").toLowerCase()}-${timestamp}.${format}`;
-
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      isCapturingScreenshot.value = false;
-    }, `image/${format}`);
-  } catch (error) {
-    console.error("Screenshot failed:", error);
-    isCapturingScreenshot.value = false;
-  }
-};
-
-// High-quality screenshot (with optional upscaling)
-const takeHighQualityScreenshot = async (scaleFactor = 2) => {
-  if (!canvas.value) return;
-  isCapturingScreenshot.value = true;
-
-  try {
-    const button = event.target.closest("button");
-    if (button) button.textContent = "Creating HQ";
-    // Create a temporary high-res canvas
-    const tempCanvas = document.createElement("canvas");
-    const tempWidth = width.value * scaleFactor;
-    const tempHeight = height.value * scaleFactor;
-    tempCanvas.width = tempWidth;
-    tempCanvas.height = tempHeight;
-
-    const tempCtx = tempCanvas.getContext("2d");
-    const currentPalette = palette.value;
-    const tempGridWidth = tempWidth / currentPixelScale.value;
-    const tempGridHeight = tempHeight / currentPixelScale.value;
-    const tempPixelScale = currentPixelScale.value / scaleFactor;
-
-    // Render at higher resolution
-    for (let x = 0; x < tempGridWidth; x++) {
-      for (let y = 0; y < tempGridHeight; y++) {
-        let i = 0,
-          zx = 0,
-          zy = 0;
-        const cx = xmin.value + x / scale.value;
-        const cy = ymin.value + y / scale.value;
-
-        do {
-          const xt = zx * zy;
-          zx = zx * zx - zy * zy + cx;
-          zy = 2 * xt + cy;
-          i++;
-        } while (i < maxIterations.value && zx * zx + zy * zy < 4);
-
-        const colorin = Math.floor((i / maxIterations.value) * 255);
-        const colorIndex = i >= maxIterations.value ? 0 : colorin;
-
-        tempCtx.fillStyle =
-          fillMode.value === "full"
-            ? currentPalette[colorin]
-            : currentPalette[colorIndex];
-
-        tempCtx.fillRect(
-          x * tempPixelScale,
-          tempHeight - y * tempPixelScale,
-          tempPixelScale,
-          tempPixelScale,
-        );
-
-        if (button) {
-          button.textContent = `Creating HQ... ${Math.round((((x + 1) * (y + 1)) / (tempGridWidth * tempGridHeight)) * 100)}%`;
-        }
-      }
-    }
-
-    // Download the high-res image
-    tempCanvas.toBlob((blob) => {
-      if (!blob) {
-        console.error("Failed to create high-res blob");
-        isCapturingScreenshot.value = false;
-        return;
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const timestamp = Date.now();
-      const location =
-        interestingPoints[currentPointIndex.value]?.name || "mandelbrot";
-      const filename = `${location.replace(/\s+/g, "-").toLowerCase()}-hq-${timestamp}.png`;
-
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      isCapturingScreenshot.value = false;
-    }, "image/png");
-  } catch (error) {
-    console.error("High-quality screenshot failed:", error);
-    isCapturingScreenshot.value = false;
-  }
-};
-
-// Copy to clipboard (modern browsers)
-const copyScreenshotToClipboard = async () => {
-  if (!canvas.value) return;
-
-  try {
-    const blob = await new Promise((resolve) => {
-      canvas.value.toBlob(resolve, "image/png");
-    });
-
-    if (!blob) {
-      throw new Error("Failed to create blob");
-    }
-
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-
-    // Optional: Show success notification
-    console.log("Screenshot copied to clipboard!");
-    // You could add a toast notification here
-  } catch (error) {
-    console.error("Failed to copy to clipboard:", error);
-    alert(
-      "Failed to copy screenshot to clipboard. Your browser may not support this feature.",
-    );
-  }
-};
-
-// Screenshot with metadata overlay
-const takeScreenshotWithInfo = () => {
-  if (!canvas.value) return;
-
-  isCapturingScreenshot.value = true;
-
-  try {
-    // Create temporary canvas with metadata
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = width.value;
-    tempCanvas.height = height.value;
-    const tempCtx = tempCanvas.getContext("2d");
-
-    // Draw the mandelbrot canvas
-    tempCtx.drawImage(canvas.value, 0, 0);
-
-    // Add metadata overlay
-    const padding = 20;
-    const fontSize = 16;
-    const lineHeight = 22;
-
-    // Semi-transparent background
-    tempCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
-    tempCtx.fillRect(padding, padding, 300, 150);
-
-    // Text
-    tempCtx.fillStyle = "#ffffff";
-    tempCtx.font = `${fontSize}px monospace`;
-
-    const info = [
-      `Location: ${interestingPoints[currentPointIndex.value]?.name || "Custom"}`,
-      `X: ${xmin.value.toFixed(8)}`,
-      `Y: ${ymin.value.toFixed(8)}`,
-      `Scale: ${scale.value.toFixed(2)}`,
-      `Theme: ${colorScheme.value}`,
-      `Date: ${new Date().toLocaleDateString()}`,
-    ];
-
-    info.forEach((line, i) => {
-      tempCtx.fillText(line, padding + 10, padding + 30 + i * lineHeight);
-    });
-
-    // Download
-    tempCanvas.toBlob((blob) => {
-      if (!blob) {
-        console.error("Failed to create blob with info");
-        isCapturingScreenshot.value = false;
-        return;
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const timestamp = Date.now();
-      const location =
-        interestingPoints[currentPointIndex.value]?.name || "mandelbrot";
-      const filename = `${location.replace(/\s+/g, "-").toLowerCase()}-info-${timestamp}.png`;
-
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      isCapturingScreenshot.value = false;
-    }, "image/png");
-  } catch (error) {
-    console.error("Screenshot with info failed:", error);
-    isCapturingScreenshot.value = false;
-  }
-};
-
-const getTempCanvas = () => {
-  if (
-    !cachedTempCanvas ||
-    cachedTempCanvas.width !== gridWidth.value ||
-    cachedTempCanvas.height !== gridHeight.value
-  ) {
-    cachedTempCanvas = document.createElement("canvas");
-    cachedTempCanvas.width = gridWidth.value;
-    cachedTempCanvas.height = gridHeight.value;
-  }
-  return cachedTempCanvas;
 };
 
 // Lifecycle
