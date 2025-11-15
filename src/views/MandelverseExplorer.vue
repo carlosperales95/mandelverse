@@ -63,6 +63,7 @@ import ExportRecordingModal from "@/components/ExportRecordingModal.vue";
 import { useThemesStore } from "@/stores/themes";
 import ScreenshotButton from "@/components/ScreenshotButton.vue";
 import ExportScreenshotModal from "@/components/ExportScreenshotModal.vue";
+import { useRecordingsStore } from "@/stores/recordings";
 
 const canvas = ref(null);
 const xmin = ref(-2);
@@ -70,6 +71,15 @@ const ymin = ref(-2);
 
 const settings = useSettingsStore();
 const themes = useThemesStore();
+const recordings = useRecordingsStore();
+
+const {
+  isRecording,
+  recordingTime,
+  showExportOptions,
+  recordingInterval,
+  gifCaptureInterval,
+} = storeToRefs(recordings);
 
 const { colorScheme, palette, fillMode } = storeToRefs(themes);
 
@@ -92,19 +102,17 @@ const {
 } = storeToRefs(settings);
 
 // Recording state
-const isRecording = ref(false);
-const mediaRecorder = ref(null);
-const recordedChunks = ref([]);
-const recordedFrames = ref([]); // For GIF export
-const recordingTime = ref("0:00");
-const showExportOptions = ref(false);
-let recordingInterval = null;
-let recordingStartTime = 0;
-let gifCaptureInterval = null;
+
+const isRendering = ref(false);
+
+let cachedTempCanvas = null;
+
 const currentPixelScale = computed(() => {
-  if (mode.value === "video") return 4;
+  /*   if (mode.value === "video") return 4; */
   return pixelScale.value;
 });
+
+let animationFrameId = null;
 
 const width = ref(window.innerWidth);
 const height = ref(window.innerHeight);
@@ -115,6 +123,53 @@ let autoZoomInterval = null;
 let clickZoomTarget = null;
 let previousFrameData = null;
 
+const workers = ref([]);
+/* const workerCount = ref(navigator.hardwareConcurrency || 8);
+ */
+const workerCount = ref(50);
+const workerPool = ref([]);
+const isWorkerPoolInitialized = ref(false);
+
+const getAdaptiveIterations = () => {
+  /* if (mode.value === 'video') return 255; */
+
+  // Reduce quality when zooming for smoother experience
+  if (isAutoZooming.value) {
+    return Math.min(maxIterations.value, 500);
+  }
+
+  return maxIterations.value;
+};
+
+const adaptiveWorkerCount = computed(() => {
+  const cores = navigator.hardwareConcurrency || 4;
+
+  // Use fewer workers in video mode for smoother performance
+  /*  if (mode.value === 'video') {
+    return Math.max(2, Math.floor(cores / 2)); // Use half the cores
+  } */
+
+  // Use more workers for high-quality mode with high iterations
+  const baseWorkers = cores;
+  if (maxIterations.value > 2000) {
+    return Math.min(baseWorkers * 2, 16);
+  }
+  return baseWorkers;
+});
+
+const initializeWorkerPool = () => {
+  if (isWorkerPoolInitialized.value) return;
+
+  const count = adaptiveWorkerCount.value;
+  workerPool.value = [];
+
+  for (let i = 0; i < count; i++) {
+    workerPool.value.push(createWorkerFromFunction(workerFunction));
+  }
+
+  isWorkerPoolInitialized.value = true;
+};
+
 // Handlers
 const handleResize = () => {
   width.value = window.innerWidth;
@@ -123,59 +178,122 @@ const handleResize = () => {
 };
 
 const handleDownload = (format) => {
-  if (format === "gif") downloadAsGIF();
-  if (format === "webm") downloadAsWebM();
+  if (format === "gif")
+    recordings.downloadAsGIF(event, width.value, height.value);
+  if (format === "webm") recordings.downloadAsWebM();
 };
 
-// Paint mandelbrot
-const mandel = () => {
-  if (!canvas.value) return;
-  const context = canvas.value.getContext("2d");
-  const currentPalette = palette.value;
+const createWorkerFromFunction = (fn) => {
+  const blob = new Blob(["(" + fn.toString() + ")()"], {
+    type: "application/javascript",
+  });
+  return new Worker(URL.createObjectURL(blob));
+};
 
-  const currentMaxIterations =
-    mode.value === "video" ? 255 : maxIterations.value;
+const workerFunction = function () {
+  self.onmessage = function (e) {
+    const {
+      startX,
+      endX,
+      startY,
+      endY,
+      xmin,
+      ymin,
+      scale,
+      maxIterations,
+      palette,
+      fillMode,
+    } = e.data;
 
-  for (let x = 0; x < gridWidth.value; x++) {
-    for (let y = 0; y < gridHeight.value; y++) {
-      let i = 0,
-        zx = 0,
-        zy = 0;
-      const cx = xmin.value + x / scale.value;
-      const cy = ymin.value + y / scale.value;
+    const parseColor = (colorStr) => {
+      if (colorStr.startsWith("#")) {
+        const hex = colorStr.slice(1);
+        return {
+          r: parseInt(hex.slice(0, 2), 16),
+          g: parseInt(hex.slice(2, 4), 16),
+          b: parseInt(hex.slice(4, 6), 16),
+        };
+      } else if (colorStr.startsWith("rgb")) {
+        const match = colorStr.match(/\d+/g);
+        return {
+          r: parseInt(match[0]),
+          g: parseInt(match[1]),
+          b: parseInt(match[2]),
+        };
+      }
+      return { r: 0, g: 0, b: 0 };
+    };
 
-      do {
-        const xt = zx * zy;
-        zx = zx * zx - zy * zy + cx;
-        zy = 2 * xt + cy;
-        i++;
-      } while (i < currentMaxIterations && zx * zx + zy * zy < 4);
+    const width = endX - startX;
+    const height = endY - startY;
+    const imageData = new ImageData(width, height);
+    const data = imageData.data;
+    const escapeRadius = 4;
+    const escapeRadiusSq = escapeRadius * escapeRadius;
 
-      const colorin = Math.floor((i / currentMaxIterations) * 255);
+    for (let x = startX; x < endX; x++) {
+      for (let y = startY; y < endY; y++) {
+        let i = 0,
+          zx = 0,
+          zy = 0;
+        const cx = xmin + x / scale;
+        const cy = ymin + y / scale;
 
-      const colorIndex =
-        i >= currentMaxIterations
-          ? 0 // first color default set points
-          : colorin;
+        // Early bailout for main cardioid and period-2 bulb
+        const q = (cx - 0.25) * (cx - 0.25) + cy * cy;
+        if (
+          q * (q + (cx - 0.25)) < 0.25 * cy * cy ||
+          (cx + 1) * (cx + 1) + cy * cy < 0.0625
+        ) {
+          i = maxIterations;
+        } else {
+          // Optimized iteration with periodicity checking
+          let oldZx = 0,
+            oldZy = 0;
+          let period = 0;
+          const checkPeriod = 20;
 
-      context.fillStyle =
-        fillMode.value == "full"
-          ? currentPalette[colorin]
-          : currentPalette[colorIndex];
-      context.fillRect(
-        x * currentPixelScale.value,
-        height.value - y * currentPixelScale.value,
-        currentPixelScale.value,
-        currentPixelScale.value,
-      );
+          while (i < maxIterations) {
+            const zxSq = zx * zx;
+            const zySq = zy * zy;
+
+            if (zxSq + zySq > escapeRadiusSq) break;
+
+            zy = 2 * zx * zy + cy;
+            zx = zxSq - zySq + cx;
+            i++;
+
+            // Periodicity checking - if orbit is repeating, it's in the set
+            if (zx === oldZx && zy === oldZy) {
+              i = maxIterations;
+              break;
+            }
+
+            period++;
+            if (period > checkPeriod) {
+              period = 0;
+              oldZx = zx;
+              oldZy = zy;
+            }
+          }
+        }
+
+        const colorin = Math.floor((i / maxIterations) * 255);
+        const colorIndex = i >= maxIterations ? 0 : colorin;
+        const color =
+          fillMode === "full" ? palette[colorin] : palette[colorIndex];
+
+        const rgb = parseColor(color);
+        const idx = ((y - startY) * width + (x - startX)) * 4;
+        data[idx] = rgb.r;
+        data[idx + 1] = rgb.g;
+        data[idx + 2] = rgb.b;
+        data[idx + 3] = 255;
+      }
     }
-  }
 
-  /*         } while (i < 255 && zx * zx + zy * zy < 4);
-      context.fillStyle = currentPalette[i];
- */
-
-  if (isAutoZooming.value) checkFrameSimilarity();
+    self.postMessage({ imageData, startX, startY, width, height });
+  };
 };
 
 // Frame Similarity function
@@ -254,7 +372,90 @@ const zoom = (event) => {
   }
 };
 
+const mandel = async () => {
+  if (!canvas.value || isRendering.value) return;
+
+  isRendering.value = true;
+
+  try {
+    // Initialize worker pool on first use
+    if (!isWorkerPoolInitialized.value) {
+      initializeWorkerPool();
+    }
+
+    const context = canvas.value.getContext("2d");
+    const currentPalette = palette.value;
+    /* const currentMaxIterations = mode.value === 'video' ? 255 : maxIterations.value; */
+    const currentMaxIterations = getAdaptiveIterations();
+
+    const tempCanvas = getTempCanvas();
+    // Create a temporary canvas to composite results
+    tempCanvas.width = gridWidth.value;
+    tempCanvas.height = gridHeight.value;
+    const tempCtx = tempCanvas.getContext("2d", { alpha: false });
+
+    // Divide work among workers
+    const workersToUse = Math.min(workerPool.value.length, gridWidth.value);
+    const chunkWidth = Math.ceil(gridWidth.value / workersToUse);
+
+    const promises = [];
+
+    for (let i = 0; i < workersToUse; i++) {
+      const worker = workerPool.value[i];
+      const startX = i * chunkWidth;
+      const endX = Math.min((i + 1) * chunkWidth, gridWidth.value);
+
+      const promise = new Promise((resolve) => {
+        const handler = (e) => {
+          const { imageData, startX, startY } = e.data;
+          tempCtx.putImageData(imageData, startX, startY);
+          worker.removeEventListener("message", handler);
+          resolve();
+        };
+
+        worker.addEventListener("message", handler);
+
+        worker.postMessage({
+          startX,
+          endX,
+          startY: 0,
+          endY: gridHeight.value,
+          xmin: xmin.value,
+          ymin: ymin.value,
+          scale: scale.value,
+          maxIterations: currentMaxIterations,
+          palette: currentPalette,
+          fillMode: fillMode.value,
+          pixelScale: currentPixelScale.value,
+          gridHeight: gridHeight.value,
+        });
+      });
+
+      promises.push(promise);
+    }
+
+    await Promise.all(promises);
+
+    // Draw everything at once
+    context.clearRect(0, 0, width.value, height.value);
+    context.save();
+    context.scale(currentPixelScale.value, -currentPixelScale.value);
+    context.drawImage(tempCanvas, 0, -gridHeight.value);
+    context.restore();
+
+    if (isAutoZooming.value) checkFrameSimilarity();
+  } finally {
+    isRendering.value = false;
+  }
+};
+
 const autoZoom = () => {
+  if (isRendering.value) {
+    // Schedule next frame
+    animationFrameId = requestAnimationFrame(autoZoom);
+    return;
+  }
+
   const point = interestingPoints[currentPointIndex.value];
   const { newCenterX, newCenterY } = centerToNewCenter(point);
   scale.value *= zoomFactor.value;
@@ -262,10 +463,36 @@ const autoZoom = () => {
   const newViewSizeY = gridHeight.value / scale.value;
   xmin.value = newCenterX - newViewSizeX / 2;
   ymin.value = newCenterY - newViewSizeY / 2;
-  mandel();
+
+  mandel().then(() => {
+    if (isAutoZooming.value) {
+      animationFrameId = requestAnimationFrame(autoZoom);
+    }
+  });
 };
 
+const toggleAutoZoom = () => {
+  isAutoZooming.value = !isAutoZooming.value;
+  if (isAutoZooming.value) {
+    previousFrameData = null;
+    sameFrameCount.value = 0;
+    autoZoom(); // Start with RAF instead of setInterval
+  } else {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    if (autoZoomInterval) {
+      clearInterval(autoZoomInterval);
+      autoZoomInterval = null;
+    }
+  }
+};
+
+// Modified autoZoomToPoint to skip if still rendering
 const autoZoomToPoint = (target) => {
+  if (isRendering.value) return; // Skip this frame if still rendering
+
   const { newCenterX, newCenterY } = centerToNewCenter(target);
   scale.value *= zoomFactor.value;
   const newViewSizeX = gridWidth.value / scale.value;
@@ -284,20 +511,6 @@ const centerToNewCenter = (point) => {
     centerY + (new Decimal(point.y) - centerY) * moveSpeed.value;
 
   return { newCenterX, newCenterY };
-};
-
-const toggleAutoZoom = () => {
-  isAutoZooming.value = !isAutoZooming.value;
-  if (isAutoZooming.value) {
-    previousFrameData = null;
-    sameFrameCount.value = 0;
-    autoZoomInterval = setInterval(autoZoom, zoomSpeed.value);
-  } else {
-    if (autoZoomInterval) {
-      clearInterval(autoZoomInterval);
-      autoZoomInterval = null;
-    }
-  }
 };
 
 const reset = () => {
@@ -329,192 +542,12 @@ const jumpToRegion = () => {
 // Recording functions
 const toggleRecording = () => {
   if (isRecording.value) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
-};
-
-const startRecording = async () => {
-  if (!canvas.value) return;
-
-  try {
-    // Create a stream from the canvas
-    const stream = canvas.value.captureStream(30); // 30 FPS
-
-    // Set up MediaRecorder with appropriate codec
-    const options = { mimeType: "video/webm;codecs=vp9" };
-    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options.mimeType = "video/webm;codecs=vp8";
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = "video/webm";
-      }
-    }
-
-    mediaRecorder.value = new MediaRecorder(stream, options);
-    recordedChunks.value = [];
-    recordedFrames.value = [];
-
-    mediaRecorder.value.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunks.value.push(event.data);
-      }
-    };
-
-    mediaRecorder.value.onstop = () => {
-      showExportOptions.value = true;
-    };
-
-    mediaRecorder.value.start();
-    isRecording.value = true;
-
-    // Capture frames for GIF export (at lower fps to reduce size)
-    gifCaptureInterval = setInterval(() => {
-      if (canvas.value) {
-        recordedFrames.value.push(canvas.value.toDataURL("image/png"));
-      }
-    }, 100); // Capture every 100ms = 10 FPS for GIF
-
-    // Start recording timer
-    recordingStartTime = Date.now();
-    recordingInterval = setInterval(updateRecordingTime, 1000);
-  } catch (error) {
-    console.error("Failed to start recording:", error);
-    alert("Failed to start recording. Please check browser permissions.");
-  }
-};
-
-const stopRecording = () => {
-  if (mediaRecorder.value && mediaRecorder.value.state !== "inactive") {
-    mediaRecorder.value.stop();
-    isRecording.value = false;
-
-    // Stop GIF capture
-    if (gifCaptureInterval) {
-      clearInterval(gifCaptureInterval);
-      gifCaptureInterval = null;
-    }
-
-    // Stop recording timer
-    if (recordingInterval) {
-      clearInterval(recordingInterval);
-      recordingInterval = null;
-    }
-    recordingTime.value = "0:00";
-  }
-};
-
-const updateRecordingTime = () => {
-  const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
-  recordingTime.value = `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
-
-const downloadAsWebM = () => {
-  const blob = new Blob(recordedChunks.value, { type: "video/webm" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `mandelbrot-${Date.now()}.webm`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  recordedChunks.value = [];
-  showExportOptions.value = false;
-};
-
-const downloadAsGIF = async () => {
-  if (recordedFrames.value.length === 0) {
-    alert("No frames captured for GIF export");
+    recordings.stopRecording();
     return;
   }
 
-  try {
-    // Show processing message
-    const originalText = "Download as GIF";
-    const button = event.target.closest("button");
-    if (button) button.textContent = "Creating GIF...";
-
-    // Use gifenc library for GIF creation
-    const { GIFEncoder, quantize, applyPalette } = await import(
-      "https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js"
-    );
-
-    const gif = GIFEncoder();
-
-    // Process frames
-    for (let i = 0; i < recordedFrames.value.length; i++) {
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = recordedFrames.value[i];
-      });
-
-      // Draw image to a temporary canvas to get pixel data
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = width.value;
-      tempCanvas.height = height.value;
-      const ctx = tempCanvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-
-      const imageData = ctx.getImageData(0, 0, width.value, height.value);
-      const palette = quantize(imageData.data, 256);
-      const index = applyPalette(imageData.data, palette);
-
-      gif.writeFrame(index, width.value, height.value, {
-        palette,
-        delay: 100, // 100ms = 10fps
-      });
-
-      // Update progress
-      if (button) {
-        button.textContent = `Creating GIF... ${Math.round(((i + 1) / recordedFrames.value.length) * 100)}%`;
-      }
-    }
-
-    gif.finish();
-
-    const blob = new Blob([gif.bytes()], { type: "image/gif" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `mandelbrot-${Date.now()}.gif`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    recordedFrames.value = [];
-    showExportOptions.value = false;
-  } catch (error) {
-    console.error("Failed to create GIF:", error);
-    alert("Failed to create GIF: " + error.message);
-  }
+  recordings.startRecording(canvas.value);
 };
-
-// Lifecycle
-onMounted(() => {
-  nextTick(() => mandel());
-  window.addEventListener("resize", handleResize);
-});
-
-onUnmounted(() => {
-  // Clean up recording if active
-  if (isRecording.value) stopRecording();
-
-  if (recordingInterval) clearInterval(recordingInterval);
-
-  if (gifCaptureInterval) clearInterval(gifCaptureInterval);
-
-  if (autoZoomInterval) clearInterval(autoZoomInterval);
-
-  window.removeEventListener("resize", handleResize);
-});
-
-// Add these functions to your component's <script setup>
 
 // Screenshot state
 const isCapturingScreenshot = ref(false);
@@ -741,4 +774,39 @@ const takeScreenshotWithInfo = () => {
     isCapturingScreenshot.value = false;
   }
 };
+
+const getTempCanvas = () => {
+  if (
+    !cachedTempCanvas ||
+    cachedTempCanvas.width !== gridWidth.value ||
+    cachedTempCanvas.height !== gridHeight.value
+  ) {
+    cachedTempCanvas = document.createElement("canvas");
+    cachedTempCanvas.width = gridWidth.value;
+    cachedTempCanvas.height = gridHeight.value;
+  }
+  return cachedTempCanvas;
+};
+
+// Lifecycle
+onMounted(() => {
+  nextTick(() => mandel());
+  window.addEventListener("resize", handleResize);
+});
+
+onUnmounted(() => {
+  workerPool.value.forEach((w) => w.terminate());
+  workerPool.value = [];
+  isWorkerPoolInitialized.value = false;
+  // Clean up recording if active
+  if (isRecording.value) recordings.stopRecording();
+
+  if (recordingInterval.value) clearInterval(recordingInterval.value);
+
+  if (gifCaptureInterval.value) clearInterval(gifCaptureInterval.value);
+
+  if (autoZoomInterval) clearInterval(autoZoomInterval);
+
+  window.removeEventListener("resize", handleResize);
+});
 </script>
