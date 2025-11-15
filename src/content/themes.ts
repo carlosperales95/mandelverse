@@ -72,8 +72,8 @@ export const themeOptions = [
     name: "Spectrum",
   },
   {
-    code: "ink",
-    name: "Ink",
+    code: "blueink",
+    name: "Blue Ink",
   },
   {
     code: "midnight",

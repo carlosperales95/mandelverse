@@ -125,10 +125,10 @@ export const useThemesStore = defineStore(
             b = 128 * Math.cos(t * Math.PI) - 0.8;
             break;
 
-          case "ink": {
-            r = Math.sin(t * Math.PI) * 130;
-            g = 128 + Math.sin(t * Math.PI * 9) * 260;
-            b = 128 + Math.cos(t * Math.PI) * 460;
+          case "blueink": {
+            r = 20 * Math.cos(t / Math.PI) + Math.pow(0.3, 1);
+            g = 250 / Math.sin(t + Math.PI);
+            b = 255 + Math.cos(t * Math.PI) / Math.pow(2, Math.log(g / 2));
             break;
           }
 
