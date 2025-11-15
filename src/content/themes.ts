@@ -4,6 +4,86 @@ export const themeOptions = [
     name: "RGB (Classic)",
   },
   {
+    code: "grayscale",
+    name: "Grayscale",
+  },
+  {
+    code: "fire",
+    name: "Fire",
+  },
+  {
+    code: "firestorm",
+    name: "Firestorm",
+  },
+  {
+    code: "ocean",
+    name: "Ocean",
+  },
+  {
+    code: "oceanic",
+    name: "Oceanic",
+  },
+  {
+    code: "ice",
+    name: "Ice",
+  },
+  {
+    code: "glacier",
+    name: "Glacier",
+  },
+  {
+    code: "copper",
+    name: "Copper",
+  },
+  {
+    code: "lavender",
+    name: "Lavender",
+  },
+  {
+    code: "broccolo",
+    name: "Broccoli",
+  },
+  {
+    code: "mint",
+    name: "Mint",
+  },
+  {
+    code: "royal",
+    name: "Royal",
+  },
+  {
+    code: "sunset",
+    name: "Sunset",
+  },
+  {
+    code: "wonderland",
+    name: "Wonderland",
+  },
+  {
+    code: "radioactive",
+    name: "Radioactive",
+  },
+  {
+    code: "hemoglobin",
+    name: "Hemoglobin",
+  },
+  {
+    code: "spectrum",
+    name: "Spectrum",
+  },
+  {
+    code: "ink",
+    name: "Ink",
+  },
+  {
+    code: "midnight",
+    name: "Midnight",
+  },
+  {
+    code: "dexter",
+    name: "Dexter",
+  },
+  {
     code: "hacker",
     name: "Hacker",
   },
@@ -26,81 +106,5 @@ export const themeOptions = [
   {
     code: "cyberpunk-pro",
     name: "Cyberpunk (Pro)",
-  },
-  {
-    code: "fire",
-    name: "Fire",
-  },
-  {
-    code: "firestorm",
-    name: "Firestorm",
-  },
-  {
-    code: "sunset",
-    name: "Sunset",
-  },
-  {
-    code: "copper",
-    name: "Copper",
-  },
-  {
-    code: "cherry",
-    name: "Cherry",
-  },
-  {
-    code: "lavender",
-    name: "Lavender",
-  },
-  {
-    code: "royal",
-    name: "Royal",
-  },
-  {
-    code: "forest",
-    name: "Forest",
-  },
-  {
-    code: "mint",
-    name: "Mint",
-  },
-  {
-    code: "peacock",
-    name: "Peacock",
-  },
-  {
-    code: "aurora",
-    name: "Aurora",
-  },
-  {
-    code: "ocean",
-    name: "Ocean",
-  },
-  {
-    code: "oceanic",
-    name: "Oceanic",
-  },
-  {
-    code: "ice",
-    name: "Ice",
-  },
-  {
-    code: "glacier",
-    name: "Glacier",
-  },
-  {
-    code: "spectrum",
-    name: "Spectrum",
-  },
-  {
-    code: "rainbow",
-    name: "Rainbow",
-  },
-  {
-    code: "midnight",
-    name: "Midnight",
-  },
-  {
-    code: "grayscale",
-    name: "Grayscale",
   },
 ];
