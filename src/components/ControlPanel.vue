@@ -41,7 +41,7 @@
           {
             name: 'Theme',
             current: currentTab == 'Theme',
-            icon: BeakerIcon,
+            icon: PaintBrushIcon,
             colors: ['purple'],
           },
         ]"
@@ -164,21 +164,37 @@
           </template>
 
           <!-- Video -->
-          <template v-if="currentTab === 'Settings' && mode == 'video'">
-            <div class="mb-2 flex gap-2 w-full">
-              <BaseButton
-                v-tooltip="'Zoom Speed settings'"
-                class="min-w-14 min-h-14"
-                :active="expandSpeedArea"
-                :colors="['blue']"
-                @click="settings.toggleExpandSpeedArea"
-              >
-                <ChevronDoubleRightIcon />
-              </BaseButton>
-              <div
-                v-show="expandSpeedArea"
-                class="transition-all md:grid md:grid-cols-2 flex flex-col gap-1 w-full"
-              >
+          <template v-if="currentTab === 'Settings'">
+            <div class="flex flex-col">
+              <div class="grid grid-cols-2 gap-2 w-full">
+                <SimpleSlider
+                  v-model="maxIterations"
+                  :disabled="isAutoZooming"
+                  min="1"
+                  max="3000"
+                  step="1"
+                  @change="emit('change-theme')"
+                >
+                  <template #label>
+                    <h3 class="font-semibold text-sm flex flex-col gap-1">
+                      Detail Iterations: {{ maxIterations }}
+                    </h3>
+                  </template>
+                </SimpleSlider>
+                <SimpleSlider
+                  v-model="pixelScale"
+                  :disabled="isAutoZooming"
+                  min="1"
+                  max="10"
+                  step="1"
+                  @change="emit('change-theme')"
+                >
+                  <template #label>
+                    <h3 class="font-semibold text-sm flex flex-col gap-1">
+                      Pixel Scale: {{ pixelScale }}
+                    </h3>
+                  </template>
+                </SimpleSlider>
                 <!-- Zoom Speed -->
                 <SimpleSlider
                   v-model="zoomSpeed"
@@ -224,40 +240,6 @@
                   </template>
                 </SimpleSlider>
               </div>
-            </div>
-          </template>
-
-          <!-- Camera -->
-          <template v-if="currentTab === 'Settings' && mode == 'camera'">
-            <div class="mb-2 flex gap-2 w-full">
-              <SimpleSlider
-                v-model="maxIterations"
-                :disabled="isAutoZooming"
-                min="1"
-                max="3000"
-                step="1"
-                @change="emit('change-theme')"
-              >
-                <template #label>
-                  <h3 class="font-semibold text-sm flex flex-col gap-1">
-                    Detail Iterations: {{ maxIterations }}
-                  </h3>
-                </template>
-              </SimpleSlider>
-              <SimpleSlider
-                v-model="pixelScale"
-                :disabled="isAutoZooming"
-                min="1"
-                max="10"
-                step="1"
-                @change="emit('change-theme')"
-              >
-                <template #label>
-                  <h3 class="font-semibold text-sm flex flex-col gap-1">
-                    Pixel Scale: {{ pixelScale }}
-                  </h3>
-                </template>
-              </SimpleSlider>
             </div>
           </template>
 
@@ -380,6 +362,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { storeToRefs } from "pinia";
 import { ref } from "vue";
 import { useThemesStore } from "@/stores/themes";
+import { PaintBrushIcon } from "@heroicons/vue/16/solid";
 
 const emit = defineEmits(["change-theme", "jump-region", "reset", "play"]);
 
