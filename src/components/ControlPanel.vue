@@ -195,50 +195,52 @@
                     </h3>
                   </template>
                 </SimpleSlider>
-                <!-- Zoom Speed -->
-                <SimpleSlider
-                  v-model="zoomSpeed"
-                  :disabled="isAutoZooming"
-                  min="2"
-                  max="192"
-                  step="2"
-                >
-                  <template #label>
-                    {{ formattedSpeed }}
-                  </template>
-                  <template #min>
-                    <span>Fast ({{ Math.round(1000 / 2) }}fps)</span>
-                  </template>
-                  <template #max>
-                    <span>Slow ({{ Math.round(1000 / 192) }}fps)</span>
-                  </template>
-                </SimpleSlider>
+                <template v-if="mode == 'video'">
+                  <!-- Zoom Speed -->
+                  <SimpleSlider
+                    v-model="zoomSpeed"
+                    :disabled="isAutoZooming"
+                    min="2"
+                    max="192"
+                    step="2"
+                  >
+                    <template #label>
+                      Zoom speed: {{ formattedSpeed }}
+                    </template>
+                    <template #min>
+                      <span>Fast ({{ Math.round(1000 / 2) }}fps)</span>
+                    </template>
+                    <template #max>
+                      <span>Slow ({{ Math.round(1000 / 192) }}fps)</span>
+                    </template>
+                  </SimpleSlider>
 
-                <!-- Move Speed -->
-                <SimpleSlider
-                  v-model="moveSpeed"
-                  :disabled="false"
-                  min="0.01"
-                  max="1"
-                  step="0.01"
-                >
-                  <template #label>
-                    <p>{{ moveSpeed }} mv</p>
-                  </template>
-                </SimpleSlider>
+                  <!-- Move Speed -->
+                  <SimpleSlider
+                    v-model="moveSpeed"
+                    :disabled="false"
+                    min="0.01"
+                    max="1"
+                    step="0.01"
+                  >
+                    <template #label>
+                      <p>Move Speed {{ moveSpeed }}</p>
+                    </template>
+                  </SimpleSlider>
 
-                <!-- Zoom Factor -->
-                <SimpleSlider
-                  v-model="zoomFactor"
-                  :disabled="false"
-                  min="1.01"
-                  max="1.5"
-                  step="0.01"
-                >
-                  <template #label>
-                    <p>{{ zoomFactor }}x zoom</p>
-                  </template>
-                </SimpleSlider>
+                  <!-- Zoom Factor -->
+                  <SimpleSlider
+                    v-model="zoomFactor"
+                    :disabled="false"
+                    min="1.01"
+                    max="1.5"
+                    step="0.01"
+                  >
+                    <template #label>
+                      <p>Zoom: {{ zoomFactor }}x</p>
+                    </template>
+                  </SimpleSlider>
+                </template>
               </div>
             </div>
           </template>
@@ -314,7 +316,10 @@
       <span class="px-3 py-1 rounded-lg bg-indigo-400">
         {{ interestingPoints[currentPointIndex].name }}
       </span>
-      <span class="px-3 py-1 rounded-lg bg-orange-500/80 backdrop-blur-sm">
+      <span
+        v-if="mode == 'video'"
+        class="px-3 py-1 rounded-lg bg-orange-500/80 backdrop-blur-sm"
+      >
         ⚠ Boring region: {{ sameFrameCount }}/{{ maxSameFrames }}
       </span>
       <span class="px-3 py-1 rounded-lg bg-emerald-400">
@@ -322,8 +327,8 @@
       </span>
     </div>
 
-    <!-- Theme selctor -->
-    <div
+    <!-- Theme selector -->
+    <!--     <div
       v-if="expandThemeSelector"
       class="absolute left-[60%] bottom-[40%] z-[9999] bg-black/40 backdrop-blur-xl p-4"
     >
@@ -333,7 +338,7 @@
         :options="themeOptions"
         @change="emit('change-theme')"
       />
-    </div>
+    </div> -->
   </div>
 </template>
 <script setup lang="ts">

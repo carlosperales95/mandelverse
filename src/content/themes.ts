@@ -40,7 +40,7 @@ export const themeOptions = [
     name: "Lavender",
   },
   {
-    code: "broccolo",
+    code: "broccoli",
     name: "Broccoli",
   },
   {
