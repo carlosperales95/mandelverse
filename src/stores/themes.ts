@@ -62,14 +62,14 @@ export const useThemesStore = defineStore(
             break;
 
           case "sunset":
-            r = 255 - t * 100;
-            g = 100 + Math.sin(t * Math.PI) * 155;
-            b = 150 + t * 105;
+            r = 255 / (t - Math.log10(0.1));
+            g = 10 * Math.sin(t * Math.PI) * 155;
+            b = 20 - (t + Math.log(8));
             break;
 
-          case "forest":
+          case "broccoli":
             r = 34 + t * 150;
-            g = 139 + t * 80;
+            g = 100 + t * 80;
             b = 34 + t * 60;
             break;
 
@@ -91,49 +91,44 @@ export const useThemesStore = defineStore(
             b = 255;
             break;
 
-          case "cherry":
-            r = 255 - t * 50;
-            g = 182 + Math.sin(t * Math.PI) * 73;
-            b = 193 + t * 62;
-            break;
-
           case "midnight":
             r = 25 + t * 230;
             g = 25 + t * 100;
             b = 112 + t * 143;
             break;
 
-          case "autumn":
+          case "radioactive":
             if (t < 0.33) {
-              r = 139 + t * 3 * 116;
-              g = t * 3 * 100;
+              r = 10 + (t * 3) / 116;
+              g = t * 3 * 0.1;
               b = 0;
             } else if (t < 0.66) {
-              r = 255;
-              g = 100 + (t - 0.33) * 3 * 155;
+              r = 20;
+              g = 300 + ((t - 0.11) / 3) * 155;
               b = 0;
             } else {
-              r = 255 - (t - 0.66) * 3 * 100;
-              g = 255 - (t - 0.66) * 3 * 155;
-              b = (t - 0.66) * 3 * 100;
+              r = 255 - (t - 0.66) * 3 * 200;
+              g = 255 - (t - 0.66) * 3 * 10;
+              b = (t - 0.66) * 0.33 - 100;
             }
             break;
 
           case "mint":
-            r = 152 - t * 100;
-            g = 251 - t * 51;
-            b = 152 + t * 50;
+            r = 0 - t * 0;
+            g = 251 - t * 100;
+            b = 100 + t * 50;
             break;
 
-          case "peacock":
-            r = Math.sin(t * Math.PI) * 255;
-            g = 128 + Math.sin(t * Math.PI * 2) * 127;
-            b = 128 + Math.cos(t * Math.PI) * 127;
+          case "wonderland":
+            r = 100 / Math.sin(t * Math.PI) / 0.9;
+            g = 100 - Math.sin((t * Math.PI) / 100) * 20;
+            b = 128 * Math.cos(t * Math.PI) - 0.8;
             break;
 
-          case "rainbow": {
-            const rgb = hslToRgb(t, 1, 0.5);
-            [r, g, b] = rgb;
+          case "blueink": {
+            r = 20 * Math.cos(t / Math.PI) + Math.pow(0.3, 1);
+            g = 250 / Math.sin(t + Math.PI);
+            b = 255 + Math.cos(t * Math.PI) / Math.pow(2, Math.log(g / 2));
             break;
           }
 
@@ -216,12 +211,11 @@ export const useThemesStore = defineStore(
             break;
           }
 
-          case "aurora": {
-            // Indigo → green → cyan → magenta → white
-            const t2 = Math.pow(t, 0.7);
-            r = Math.floor(100 + 155 * Math.sin(2 * Math.PI * t2));
-            g = Math.floor(200 * Math.pow(t2, 0.8));
-            b = Math.floor(255 * Math.pow(1 - t2, 0.5));
+          case "hemoglobin": {
+            const t2 = Math.pow(t, 0.02);
+            r = Math.floor(200 - Math.cos(2 * Math.PI * t2));
+            g = Math.floor((20 / Math.pow(t2, 0.8)) * Math.cos(t * Math.PI));
+            b = Math.floor(255 / Math.pow(1 - t2, 3.2));
             break;
           }
 
@@ -253,6 +247,12 @@ export const useThemesStore = defineStore(
             b = c(240);
             break;
           }
+
+          case "dexter":
+            r = 900 + t * 300;
+            g = 200 - Math.sin(t * Math.PI) * 40;
+            b = 800 - t * 90;
+            break;
 
           case "cyberpunk":
             r = 255 - t * 155;
