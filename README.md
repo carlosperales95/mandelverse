@@ -1,10 +1,30 @@
 # The Mandelverse - Mandelbrot Set Explorer
 
-An interactive Mandelbrot fractal explorer built with Vue 3.
+<p align="left">
+    <!-- Last Commit -->
+    <img src="https://img.shields.io/github/last-commit/carlosperales95/mandelverse" alt="Last Commit">
+    <!-- License -->
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License">
+    <!-- Repo Size -->
+    <img src="https://img.shields.io/github/repo-size/carlosperales95/mandelverse?label=Repo%20Size" alt="Repo Size">
+</p>
+
+<p align="left">
+    <!-- Vue 3 -->
+    <img src="https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js" alt="Vue 3">
+    <!-- TS -->
+    <img src="https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square" alt="Typescript">
+    <!-- JS -->
+    <img src="https://img.shields.io/badge/JavaScript-ES202x-f7df1e?logo=javascript&logoColor=black" alt="JavaScript">
+    <!-- Vite -->
+    <img src="https://img.shields.io/badge/Vite-Bundled-646cff?logo=vite" alt="Vite">
+</p>
+
+An interactive, minimalistic, and visually-focused Mandelbrot fractal explorer built with Vue 3.
 
 <img src="src/assets/detailed-example-photo.png" width="100%" height="100%"/>
 
-The Mandelbrot set is a famous fractal — a complex, infinitely detailed mathematical shape that exhibits self-similarity at every scale. It’s defined by iterating the simple equation
+The Mandelbrot set is one of the most iconic fractals — an infinitely complex shape generated from the simple iteration:
 
 $$
 z_{n+1} = z_n^2 + c
@@ -16,24 +36,39 @@ When visualized, the Mandelbrot set reveals intricate, beautiful patterns that r
 
 
 
-With this simple website, I wanted to dive deeper into this great equation, and give the user total freedom to explore the set and find its beautiful and hidden visuals. 
+The Mandelverse lets you freely explore these patterns, zoom into hidden structures, and discover the wild visuals that emerge from this tiny equation.
 
-> [!IMPORTANT]  
-> The video detail settings are limited to ensure there are no performance issues and runs smoothly. Adding more iterations and smaller pixel scale takes a big hit on CPU usage. I am planning on optimizing this in the future, but for now we keep video settings limited.
+> [!NOTE]
+> High iteration counts or very small pixel scales still greatly increase render time. I want to improve > this in the future to get better performance.
+
 
 <img src="src/assets/mandelbrot.gif" width="100%" height="100%"/>
 
 ## Features
 
-- Automatic Zoom to clicked point on set
-- Automatic zoom to selected region of set
-- Pre-defined interesting fractal regions
-- Random exploration mode (automatic jump through regions)
-- Record explorer and export as `.webm` or `.gif`
-- Zoom behavior settings
-- Boring region detection
-- Multiple color themes
-- Mobile friendly!
+🔍 Exploration
+- Click-to-zoom into any point
+- Predefined “interesting spots” to jump to instantly
+- Customize fractal settings (pixel scale, detail iterations...)
+- Random Exploration Mode:
+    - Automatically jumps through locations in the set
+    - Detects “boring regions” using a configurable threshold
+
+🎥 Video Mode
+- Record zoom explorations and export as `.webm` or `.gif`
+- Multithreaded rendering for smoother video captures
+
+
+📸 Camera Mode
+- Capture screenshots directly from the explorer
+- Export image or copy to clipboard
+
+
+🎨 Visual Customization
+- Completely redesigned color themes
+- Multiple palettes for dramatically different fractal moods
+- Minimalist and compact UI that maximizes screen space
+
 
 ## How to run it locally?
 
