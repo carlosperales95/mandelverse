@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col md:w-3/4 w-full max-w-xl h-full mx-4">
+    <!-- Top tabs -->
     <BaseTabs
       class="flex w-full -gap-1 justify-end h-full pr-8"
       :direction="'row'"
@@ -106,7 +107,7 @@
           <template v-if="currentTab == 'Discovery'">
             <SimpleSelector
               v-model="selectedRegion"
-              class="w-full flex gap-1"
+              class="w-full"
               :options="interestingPoints"
               @change="emit('jump-region')"
             />
@@ -262,27 +263,17 @@
                 <h3 class="font-semibold text-sm flex flex-col gap-1">
                   Fill Mode
                 </h3>
-                <div class="flex gap-1 rounded-2xl">
+                <div class="flex">
                   <BaseButton
                     :active="fillMode === 'full'"
                     :colors="['red']"
-                    @click="
-                      {
-                        fillMode = 'border';
-                        emit('change-theme');
-                      }
-                    "
+                    @click="handleChangeFillMode('border')"
                     >Border</BaseButton
                   >
                   <BaseButton
                     :active="fillMode === 'border'"
                     :colors="['indigo']"
-                    @click="
-                      {
-                        fillMode = 'full';
-                        emit('change-theme');
-                      }
-                    "
+                    @click="handleChangeFillMode('full')"
                     >Full</BaseButton
                   >
                 </div>
@@ -326,19 +317,6 @@
         Scale: {{ scale.toFixed(1) }}
       </span>
     </div>
-
-    <!-- Theme selector -->
-    <!--     <div
-      v-if="expandThemeSelector"
-      class="absolute left-[60%] bottom-[40%] z-[9999] bg-black/40 backdrop-blur-xl p-4"
-    >
-      <SimpleSelector
-        v-model="colorScheme"
-        class="w-full flex gap-1"
-        :options="themeOptions"
-        @change="emit('change-theme')"
-      />
-    </div> -->
   </div>
 </template>
 <script setup lang="ts">
@@ -351,11 +329,8 @@ import {
   ViewfinderCircleIcon,
   GlobeEuropeAfricaIcon,
   MapPinIcon,
-  BeakerIcon,
   InformationCircleIcon,
-  ChevronDoubleRightIcon,
   AdjustmentsVerticalIcon,
-  Cog6ToothIcon,
   CameraIcon,
   VideoCameraIcon,
 } from "@heroicons/vue/24/solid";
@@ -375,7 +350,6 @@ const settings = useSettingsStore();
 
 const {
   expandControlPanel,
-  expandSpeedArea,
   zoomSpeed,
   isAutoZooming,
   clickAutoZoomMode,
@@ -389,7 +363,6 @@ const {
   currentPointIndex,
   sameFrameCount,
   scale,
-  expandThemeSelector,
   maxIterations,
   pixelScale,
   mode,
@@ -401,4 +374,9 @@ const { colorScheme, fillMode } = storeToRefs(themes);
 
 type SettingsTab = "Discovery" | "Settings" | "Theme";
 const currentTab = ref<SettingsTab>("Discovery");
+
+const handleChangeFillMode = (mode: "full" | "border") => {
+  fillMode.value = mode;
+  emit("change-theme");
+};
 </script>

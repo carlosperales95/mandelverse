@@ -1,6 +1,6 @@
 # The Mandelverse - Mandelbrot Set Explorer
 
-An interactive Mandelbrot fractal explorer built with Vue 3.
+An interactive Mandelbrot fractal explorer built with Vue 3. Inspired by this great [article](https://slicker.me/fractals/fractals.htm)
 
 <img src="src/assets/detailed-example-photo.png" width="100%" height="100%"/>
 
